@@ -65,6 +65,32 @@ def calcular_largo_ruta(ruta, matriz_dist):
 
     return sum_dist
 
+def graficar_ruta(ruta, G):
+    grafo = nx.DiGraph()
+    nodos = list(G.nodes())
+    color_nodos = []
+    for nodo in nodos:
+        id_nodo = int(nodo[2:])
+        if id_nodo in ruta and id_nodo != 0:
+            grafo.add_node(nodo, pos=G.nodes()[nodo]['pos'])
+            color_nodos.append('red')
+        elif id_nodo == 0:
+            grafo.add_node(nodo, pos=G.nodes()[nodo]['pos'])
+            color_nodos.append('green')
+        else:
+            grafo.add_node(nodo, pos=G.nodes()[nodo]['pos'])
+            color_nodos.append('gray')
+    nodo_fin = ruta[-1]
+
+    for i in range(len(ruta)-1):
+        n1, n2 = ruta[i], ruta[i+1]
+        grafo.add_edge(f'N_{n1}', f'N_{n2}', color='red')
+
+    plt.figure(figsize=(5,5))
+    pos=nx.get_node_attributes(G,'pos')
+    nx.draw(grafo, pos=pos, with_labels=True, node_size=18, font_size=15,  node_color = color_nodos)
+    plt.show()
+
 # ubis, cap_tpte, info_locales = read_data('IRP1.xlsx')
 
 # G = nx.DiGraph()
