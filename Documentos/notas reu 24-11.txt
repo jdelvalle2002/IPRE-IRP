@@ -1,0 +1,27 @@
+qué pasa con ruteo de inventario si le metemos pronósticos de demanda, estrategias proactivas
+equivalente a primera entrega: implementar modelo de paper, buscar alguno
+2da y 3ra: revisar oportunidades de mejora de solución
+
+esto no es solo un modelo matetmático, es orientación a toma de decisiones
+
+contemplar simulaciones, hacerlas c/u, jugar con parámetros como volatilidad de la demanda, periodicidad etcétera
+
+qué tan estables son situaciones sincronizadas con inicios sin sincronización
+
+cuántas veces llegamos a un equilibrio conveniente
+
+experimento sencillo: situacion geográfica con frecuencia deseada de visita, probar con distintas situaciones iniciales, aplicando heurística de coelho
+
+cómo hacer plan de transición para pasar de desfasado a en fase
+
+idea de continuación de javier: revisar qué pasa introduciendo ruido.
+
+presentación final: esto es exploratorio, mostrar lo que aprendimos
+
+4 de diciembre: presentar resultados de las simulaciones y el experimento de distintos puntos de partida.
+
+datos: podemos generar random o con instancias de Leandor Coelho
+
+
+
+propósito general del profe: horizonte táctico.
