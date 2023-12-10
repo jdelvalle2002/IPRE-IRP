@@ -59,8 +59,8 @@ def calcular_largo_ruta(ruta, matriz_dist):
     num_puntos = len(ruta)
 
     for i in range(num_puntos - 1):
-        nodo = f'N_{ruta[i]}'
-        next_nodo = f'N_{ruta[i + 1]}'
+        nodo = ruta[i]
+        next_nodo = ruta[i + 1]
         sum_dist += matriz_dist[nodo][next_nodo]
 
     return sum_dist
@@ -68,13 +68,14 @@ def calcular_largo_ruta(ruta, matriz_dist):
 def graficar_ruta(ruta, G):
     grafo = nx.DiGraph()
     nodos = list(G.nodes())
+
     color_nodos = []
     for nodo in nodos:
-        id_nodo = int(nodo[2:])
-        if id_nodo in ruta and id_nodo != 0:
+        
+        if nodo in ruta and nodo != 'N_0':
             grafo.add_node(nodo, pos=G.nodes()[nodo]['pos'])
             color_nodos.append('red')
-        elif id_nodo == 0:
+        elif nodo == 'N_0':
             grafo.add_node(nodo, pos=G.nodes()[nodo]['pos'])
             color_nodos.append('green')
         else:
@@ -83,10 +84,11 @@ def graficar_ruta(ruta, G):
 
     for i in range(len(ruta)-1):
         n1, n2 = ruta[i], ruta[i+1]
-        grafo.add_edge(f'N_{n1}', f'N_{n2}', color='red')
+        print('añadierndo arco', n1, n2)
+        grafo.add_edge(n1, n2, color='red')
 
     plt.figure(figsize=(5,5))
-    pos=nx.get_node_attributes(G,'pos')
+    pos=nx.get_node_attributes(grafo,'pos')
     nx.draw(grafo, pos=pos, with_labels=True, node_size=18, font_size=15,  node_color = color_nodos)
     plt.show()
 
