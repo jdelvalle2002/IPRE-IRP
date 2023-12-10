@@ -84,7 +84,7 @@ def graficar_ruta(ruta, G):
 
     for i in range(len(ruta)-1):
         n1, n2 = ruta[i], ruta[i+1]
-        print('añadierndo arco', n1, n2)
+
         grafo.add_edge(n1, n2, color='red')
 
     plt.figure(figsize=(5,5))
