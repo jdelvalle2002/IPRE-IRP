@@ -33,6 +33,10 @@ matriz_dst = calcular_matriz_dist_alns(G)
 demandas = simular_demanda_diaria(list(info_locales["r"]), dist="n")
 print(demandas)
 
+degree_of_destruction = 0.2
+nodes_to_destroy = int(np.ceil(degree_of_destruction * len(G.nodes)))
+
+
 '''
 Definición de la clase IRPState
 '''
@@ -94,16 +98,12 @@ def greedy_repair(state, random_state):
         route, idx = best_insert(node, repaired)
         if route is not None:
             route.insert(idx, node)
-
         else:
             repaired.routes.append([node])
-
-
     return repaired
 
 def best_insert(node, state):
     best_cost, best_route, best_idx = float("inf"), None, None
-
     for route in state.routes:
         for i in range(1, len(route) + 1):
             if can_insert(node, route):
@@ -116,7 +116,7 @@ def best_insert(node, state):
 
     return best_route, best_idx
 
-def can_insert(node, route, demanda=demandas, cap = cap_tpte/2):
+def can_insert(node, route, demanda, cap = 871):
     total = sum([demanda[int(nodo[2:])] for nodo in route])
     return total + demanda[int(node[2:])] <= cap   ####OJO ACÁ CON EL CAP, SI QUIERO CAMBIAR LA CAPACIDAD DEL VEHÍCULO TENGO QUE MODIFICARLO ACÁ
 
@@ -150,11 +150,12 @@ def simular_demanda_diaria(data, dist="d", log=False):
         # print(i, ":", data[i])
     return demanda
 
-def neighborhood(G, node, distancias = matriz_dst):
+def neighborhood(G, node, distancias):
     # ordenaremos los nodo por distancia al nodo actual
     return sorted(G.neighbors(node), key=lambda x: distancias[int(node[2:])][int(x[2:])])
 
-def nearest_neighbor_adapted(grafo, demandas, cap):
+
+def nearest_neighbor_adapted(grafo, demandas, distancias, cap):
     """
     Adaptación del algoritmo Nearest Neighbor descrito anteriormente para que se utilice con la
     clase IRPState
@@ -187,12 +188,10 @@ def nearest_neighbor_adapted(grafo, demandas, cap):
     routes.append(route)
     return IRPState(routes)
 
-degree_of_destruction = 0.5
-nodes_to_destroy = int(np.ceil(degree_of_destruction * len(G.nodes)))
-
 def ruteo_ALNS(grafo, demandas, cap, F=1, ruta = False, MRT = 1):
+    matriz_dst = calcular_matriz_dist_alns(grafo)
+    init = nearest_neighbor_adapted(grafo, demandas, distancias = matriz_dst, cap=cap)
 
-    init = nearest_neighbor_adapted(grafo, demandas, cap=cap)
     alns = ALNS(np.random.RandomState(42))
     alns.add_destroy_operator(random_removal)
     alns.add_repair_operator(greedy_repair)
@@ -217,13 +216,13 @@ def ruteo_ALNS(grafo, demandas, cap, F=1, ruta = False, MRT = 1):
     else:
         return result
 
-# if __name__ == "__main__":
-#     result = ruteo_ALNS(G, demandas, cap=np.inf, F=1)
-#     solution = result.best_state
-#     objective = solution.objective()
-#     # pct_diff = 100 * (objective - bks.cost) / bks.cost
+if __name__ == "__main__":
+    result = ruteo_ALNS(G, demandas, cap=np.inf, F=1)
+    solution = result.best_state
+    objective = solution.objective()
+    # pct_diff = 100 * (objective - bks.cost) / bks.cost
 
-#     print(f"Best heuristic objective is {objective}.")
-#     for idx, route in enumerate(solution.routes):
-#         print(f"Route {idx}:", route + ['N_0'])
-#         graficar_ruta(G= G, ruta= route + ['N_0'])
+    print(f"Best heuristic objective is {objective}.")
+    for idx, route in enumerate(solution.routes):
+        print(f"Route {idx}:", route + ['N_0'])
+        graficar_ruta(G= G, ruta= route + ['N_0'])
