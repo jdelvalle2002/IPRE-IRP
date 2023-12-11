@@ -168,7 +168,6 @@ def graficar_rutas(rutas, G):
 
     plt.figure(figsize=(5, 5))
     colors = nx.get_edge_attributes(grafo, "color").values()
-    print(colors)
     pos = nx.get_node_attributes(G, "pos")
     # edges = grafo.edges()
     nx.draw(

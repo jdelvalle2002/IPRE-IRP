@@ -28,7 +28,7 @@ random.seed(42)
 np.random.seed(42)
 
 # Cargar datos
-G, ubis, cap_tpte, info_locales = crear_grafo_inicial(archivo= 'IRP3.xlsx' ,plot=False)
+G, ubis, cap_tpte, info_locales = crear_grafo_inicial(archivo= 'IRP1.xlsx' ,plot=False)
 matriz_dst = calcular_matriz_dist_alns(G)
 demandas = simular_demanda_diaria(list(info_locales["r"]), dist="n")
 print(demandas)
@@ -94,8 +94,10 @@ def greedy_repair(state, random_state):
         route, idx = best_insert(node, repaired)
         if route is not None:
             route.insert(idx, node)
+
         else:
             repaired.routes.append([node])
+
 
     return repaired
 
@@ -114,9 +116,9 @@ def best_insert(node, state):
 
     return best_route, best_idx
 
-def can_insert(node, route, demanda=demandas):
+def can_insert(node, route, demanda=demandas, cap = cap_tpte/2):
     total = sum([demanda[int(nodo[2:])] for nodo in route])
-    return total + demanda[int(node[2:])] <= cap_tpte
+    return total + demanda[int(node[2:])] <= cap   ####OJO ACÁ CON EL CAP, SI QUIERO CAMBIAR LA CAPACIDAD DEL VEHÍCULO TENGO QUE MODIFICARLO ACÁ
 
 def insertion_cost(node, route, idx):
     pred = "N_0" if idx == 0 else route[idx - 1]
@@ -152,11 +154,12 @@ def neighborhood(G, node, distancias = matriz_dst):
     # ordenaremos los nodo por distancia al nodo actual
     return sorted(G.neighbors(node), key=lambda x: distancias[int(node[2:])][int(x[2:])])
 
-def nearest_neighbor_adapted(grafo, demandas):
+def nearest_neighbor_adapted(grafo, demandas, cap):
     """
     Adaptación del algoritmo Nearest Neighbor descrito anteriormente para que se utilice con la
     clase IRPState
     """
+    # print(f'Capacidad del vehículo: {cap} | demanda total = {sum(demandas.values())}')
     G0 = grafo.copy()
     routes = []
     available = list(G0.nodes)
@@ -172,8 +175,9 @@ def nearest_neighbor_adapted(grafo, demandas):
         while my_neighbors[0] in route:
             my_neighbors = my_neighbors[1:]
         nearest = my_neighbors[0]
-
-        if route_demands + demandas[int(nearest[2:])] <= cap_tpte:
+        
+        # print(f'uso de vehículo: {route_demands} | demanda del nodo {nearest}: {demandas[int(nearest[2:])]}')
+        if route_demands + demandas[int(nearest[2:])] <= cap:
             route.append(nearest)
             route_demands += demandas[int(nearest[2:])]
             # print('nodesd:', nodes, 'nearest:', nearest)
@@ -181,16 +185,14 @@ def nearest_neighbor_adapted(grafo, demandas):
         else:
             break
     routes.append(route)
-
     return IRPState(routes)
 
-degree_of_destruction = 0.1
+degree_of_destruction = 0.5
 nodes_to_destroy = int(np.ceil(degree_of_destruction * len(G.nodes)))
 
-def ruteo_ALNS(grafo, demandas, F=1, ruta = False):
-    print("iniciando...")
-    init = nearest_neighbor_adapted(grafo, demandas)
+def ruteo_ALNS(grafo, demandas, cap, F=1, ruta = False, MRT = 1):
 
+    init = nearest_neighbor_adapted(grafo, demandas, cap=cap)
     alns = ALNS(np.random.RandomState(42))
     alns.add_destroy_operator(random_removal)
     alns.add_repair_operator(greedy_repair)
@@ -203,7 +205,7 @@ def ruteo_ALNS(grafo, demandas, F=1, ruta = False):
         step=0.9993,
         method="exponential",
     )
-    stop = MaxRuntime(5)
+    stop = MaxRuntime(MRT)
 
     result = alns.iterate(init, select, accept, stop)
     init = result.best_state
@@ -215,13 +217,13 @@ def ruteo_ALNS(grafo, demandas, F=1, ruta = False):
     else:
         return result
 
-if __name__ == "__main__":
-    result = ruteo_ALNS(G, demandas, F=1)
-    solution = result.best_state
-    objective = solution.objective()
-    # pct_diff = 100 * (objective - bks.cost) / bks.cost
+# if __name__ == "__main__":
+#     result = ruteo_ALNS(G, demandas, cap=np.inf, F=1)
+#     solution = result.best_state
+#     objective = solution.objective()
+#     # pct_diff = 100 * (objective - bks.cost) / bks.cost
 
-    print(f"Best heuristic objective is {objective}.")
-    for idx, route in enumerate(solution.routes):
-        print(f"Route {idx}:", route + ['N_0'])
-        graficar_ruta(G= G, ruta= route + ['N_0'])
+#     print(f"Best heuristic objective is {objective}.")
+#     for idx, route in enumerate(solution.routes):
+#         print(f"Route {idx}:", route + ['N_0'])
+#         graficar_ruta(G= G, ruta= route + ['N_0'])
