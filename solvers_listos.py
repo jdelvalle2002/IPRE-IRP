@@ -20,8 +20,6 @@ from funciones import (
 # from instancia import G, color_nodos, color_arcos, ancho_edges
 from instancia import *
 
-random.seed(42)
-np.random.seed(42)
 
 
 def simular_demanda_diaria(data, dist="d", log=False):
