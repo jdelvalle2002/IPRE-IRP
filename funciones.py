@@ -12,8 +12,7 @@ import os
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-random.seed(42)
-np.random.seed(42)
+
 
 
 def read_data(filename):

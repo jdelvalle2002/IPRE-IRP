@@ -17,8 +17,7 @@ from funciones import (
     calcular_largo_ruta,
 )
 
-random.seed(42)
-np.random.seed(42)
+
 
 
 def crear_grafo_inicial(archivo="IRP1.xlsx", plot=False):
