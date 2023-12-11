@@ -60,14 +60,20 @@ def nearest_neighbor(
     """
     Apply the Nearest Neighbor heuristic to find initial routes for VRP.
     """
-
+    # print('Ejecutando nearest_neighbor')
     if "N_0" not in demands.keys():
         demands = {f"N_{k}": v for k, v in demands.items()}
+    nodos = []
     if disponibilidad is None:
         nodos = list(G.nodes)
+
     else:
         # recorremos la lista de nodos y nos quedamos con los que tienen disponibilidad
-        nodos = [nodo for nodo in list(G.nodes) if disponibilidad[nodo]]
+        for nodo in list(G.nodes):
+            # print('¿Visito el nodo? ', nodo, disponibilidad[nodo])
+            if disponibilidad[nodo]:
+                nodos.append(nodo)
+        # nodos = [nodo for nodo in list(G.nodes) if disponibilidad[nodo]]
     N = len(nodos)
     visitados = {nodo: False for nodo in nodos}
     rutas = []
@@ -77,12 +83,14 @@ def nearest_neighbor(
         capacidad_actual = 0
         ruta = [nodo_actual]
         visitados[nodo_actual] = True
+        # print('aca')
         while True:  # capacidad_actual + demands[nodo_actual] <= capacity:
             actual = ruta[-1]
             cercano = None
             min_dist = float("inf")
             # print('actual: ', actual)
             for vecino in G.neighbors(actual):
+                # print('vecino: ', vecino)
                 if vecino not in nodos or visitados[vecino]:
                     # print(f'el nodo {vecino} no está en la lista de nodos')
                     pass
@@ -106,7 +114,6 @@ def nearest_neighbor(
                 # capacidad_actual += demands[cercano] omitiremos la capacidad por ahora
         ruta.append("N_0")
         # print('Ruta actual: ', ruta, '\n')
-        # print('Ruta actual: ', ruta, '\n')
         rutas.append(ruta)
     return rutas
 
@@ -128,9 +135,8 @@ def two_opt(ruta_inicial, matriz_dst, iters):
         if calcular_largo_ruta(nueva_ruta, matriz_dst) < calcular_largo_ruta(
             ruta_2opt, matriz_dst
         ):
-            print("Mejora encontrada")
-            print("Ruta anterior: ", ruta_2opt)
-            print("Nueva ruta: ", nueva_ruta)
+            # print("Ruta anterior: ", ruta_2opt)
+            # print("Mejora encontrada -> Nueva ruta: ", nueva_ruta)
             ruta_2opt = nueva_ruta
 
     return ruta_2opt
@@ -148,16 +154,17 @@ def graficar_rutas(rutas, G):
             color_nodos.append("black")
         else:
             color_nodos.append("green")
-    for ruta in rutas:
-        color = colores[-1]
-        colores.remove(color)
-        print(f"Ruta: {ruta} en color: {color}")
+    for ruta in rutas.values():
+        if ruta != []:
+            color = colores[-1]
+            colores.remove(color)
+            # print(f"Ruta: {ruta} en color: {color}")
 
-        for i in range(len(ruta) - 1):
-            n1, n2 = ruta[i], ruta[i + 1]
-            grafo.add_edge(n1, n2, color=color)
-            print(f"Agregando arco: {n1} -> {n2} en color: {color}")
-            color_edges.append(color)
+            for i in range(len(ruta) - 1):
+                n1, n2 = ruta[i], ruta[i + 1]
+                grafo.add_edge(n1, n2, color=color)
+                # print(f"Agregando arco: {n1} -> {n2} en color: {color}")
+                color_edges.append(color)
 
     plt.figure(figsize=(5, 5))
     colors = nx.get_edge_attributes(grafo, "color").values()
@@ -178,10 +185,15 @@ def graficar_rutas(rutas, G):
 
 def generar_ruta(G, matriz_dst, nodos_a_visitar):
     rutas_NN = nearest_neighbor(
-        G, dist_matrix=matriz_dst, disponibilidad=nodos_a_visitar
+        G, dist_matrix=matriz_dst, disponibilidad = nodos_a_visitar
     )
+    # print( "Ruta NN: ")
+    # print(rutas_NN[0])
     rutas_2opt = [two_opt(ruta, matriz_dst, 1000) for ruta in rutas_NN]
-    rutas = [rutas_NN[0], rutas_2opt[0]]
-
-    largo = calcular_largo_ruta(rutas[1], matriz_dst)
+    # print( "Ruta 2O: ", rutas_2opt[0])
+    # rutas = [rutas_NN[0], rutas_2opt[0]]
+    # largo = calcular_largo_ruta(rutas[1], matriz_dst)
+    rutas = rutas_2opt[0]
+    largo = calcular_largo_ruta(rutas, matriz_dst)
     return rutas, largo  # retornamos la ruta 2opt y su largo
+
