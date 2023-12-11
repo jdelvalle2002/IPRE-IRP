@@ -113,6 +113,24 @@ def graficar_rutas(rutas, G):
     nx.draw(grafo, pos=pos, with_labels=True, node_size=18, font_size=15,  node_color = color_nodos)
     plt.show()
 
+def calcular_matriz_dist_alns(G):
+    matriz_distancias = {int(nodo[2:]): {} for nodo in G.nodes()}
+    for arco in G.edges(data=True):
+        n1, n2, data = arco
+        n1 = int(n1.split("_")[-1])
+        n2 = int(n2.split("_")[-1])
+        matriz_distancias[n1][n2] = data['weight']
+
+    for n1 in G.nodes():
+        n1 = int(n1.split("_")[-1])
+        for n2 in G.nodes():
+            n2 = int(n2.split("_")[-1])
+            if n2 not in matriz_distancias[n1].keys():
+                matriz_distancias[n1][n2] = np.inf
+    return matriz_distancias
+
+
+
 # ubis, cap_tpte, info_locales = read_data('IRP1.xlsx')
 
 # G = nx.DiGraph()
