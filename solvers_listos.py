@@ -8,17 +8,11 @@ import random
 from matplotlib import pyplot as plt
 import numpy as np
 
-from funciones import (
-    read_data,
-    calcular_distancia,
-    calcular_matriz_dist,
-    calcular_largo_ruta,
-    graficar_ruta,
-)
+from funciones import *
 
 # from instancia import ubis, cap_tpte, info_locales
 # from instancia import G, color_nodos, color_arcos, ancho_edges
-from instancia import *
+# from instancia import *
 
 
 

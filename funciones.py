@@ -9,10 +9,9 @@ import random
 from matplotlib import pyplot as plt
 import numpy as np
 import os 
+from scipy.stats import norm
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-
 
 
 def read_data(filename):
@@ -30,6 +29,59 @@ def read_data(filename):
 
     # return df_locales
     return ubis, cap_tpte, df_locales
+
+def crear_grafo_inicial(archivo="IRP1.xlsx", plot=False):
+    ubis, cap_tpte, info_locales = read_data(archivo)
+
+    G = nx.DiGraph()
+    color_nodos = []
+    color_arcos = []
+    ancho_edges = []
+
+    for local in info_locales.itertuples():
+        G.add_node(
+            f"N_{local.i}",
+            Inv=local.I,
+            Up=local.U,
+            Low=local.L,
+            Prod=local.r,
+            h=local.h,
+            coord_x=local.X,
+            coord_y=local.Y,
+            pos=(local.X, local.Y),
+        )
+        if local.i != 0:
+            color_nodos.append("blue")
+        else:
+            color_nodos.append("red")
+
+    for local in G.nodes():
+        for nodo in G.nodes():
+            if local != nodo:
+                dist = calcular_distancia(G.nodes[local]["pos"], G.nodes[nodo]["pos"])
+                G.add_edge(local, nodo, weight=dist)
+                if local != "N_0" and nodo != "N_0":
+                    ancho_edges.append(0.25)
+                    color_arcos.append("gray")
+                elif local == "N_0" or nodo == "N_0":
+                    ancho_edges.append(1)
+                    color_arcos.append("black")
+    if plot:
+        plt.figure(figsize=(5, 5))
+        pos = nx.get_node_attributes(G, "pos")
+        nx.draw(
+            G,
+            pos=pos,
+            with_labels=True,
+            node_size=18,
+            font_size=15,
+            node_color=color_nodos,
+            width=ancho_edges,
+            edge_color=color_arcos,
+        )
+        plt.show()
+
+    return G, ubis, cap_tpte, info_locales
 
 def calcular_distancia(n1, n2):
 
@@ -128,6 +180,133 @@ def calcular_matriz_dist_alns(G):
                 matriz_distancias[n1][n2] = np.inf
     return matriz_distancias
 
+def simular_demanda_previa(G, dist = 'n', T =100, ruido = 0):
+    """
+    Función que simula la demanda previa de los locales.
+    """
+    g = G.copy()
+    demandas = {nodo : [] for nodo in g.nodes() if nodo != 'N_0'}
+    # r = {nodo : nodo[1]['Prod'] for nodo in G.nodes(data=True)}
+    if dist == 'n':
+        for nodo in g.nodes(data=True):
+            # print(nodo[0],nodo[1]['Prod'])
+            if nodo[0] != 'N_0':
+                dem_pasadas = [max(
+                    np.random.normal(loc = nodo[1]['Prod'], scale = nodo[1]['Prod'] * 0.05) 
+                    + np.random.normal(loc = 0, scale = nodo[1]['Prod'] * ruido)
+                    ,0) for _ in range(T)]
+                demandas[nodo[0]] = dem_pasadas
+    return demandas
+
+def smooth(y, box_pts):
+    box = np.ones(box_pts)/box_pts
+    y_smooth = np.convolve(y, box, mode='same')
+    return y_smooth
+
+def SEDA(datos, historia = False, alpha=0.1, beta=0.1, theta=0.5):
+    '''
+    Suavizamiento Exponencial Doble Amortiguado
+    Aplica el método de suavizamiento exponencial doble a una serie de datos,
+    específicmamente el Método de Holt Damped.
+    '''
+    I = [datos[0]]
+    S = [datos[1]-datos[0]]
+    for i in range(1,len(datos)):
+        I.append(alpha*datos[i] + (1-alpha)*(I[i-1]+ theta*S[i-1]))
+        S.append(beta*(I[i]-I[i-1])+(1-beta)*S[i-1])
+    
+    y = I[-1] + theta * S[-1]
+    if historia == False:
+        return y
+    elif historia == True:
+        I.append(y)
+        return I
+    elif historia == 'S':
+        return I, S
+    
+def pronostico_SEDA(datos, T, pron = False, alpha=0.1, beta=0.1, theta=0.5):
+    '''
+    Devuelve un pronóstico para los siguientes T periodos mediante Suavizamiento Exponencial Doble Amortiguado
+    '''
+    I,S = SEDA(datos, historia = 'S', alpha=alpha, beta=beta, theta=theta)
+    pronostico = []
+    for i in range(T):
+        y = I[-1] + theta * S[-1]
+        pronostico.append(y)
+        I.append(alpha*y + (1-alpha)*(I[-1]+ theta*S[-1]))
+        S.append(beta*(I[-1]-I[-2]) + (1-beta)*S[-1])
+    
+    return pronostico
+
+def IC_nrm(mu, sd, M=1000, alfa = 0.95):
+    """
+    Función que calcula el intervalo de confianza para una distribución normal.
+    """
+    limite_inferior = mu + norm.ppf((1 - alfa) / 2) * sd / math.sqrt(M)
+    limite_superior = mu - norm.ppf((1 - alfa) / 2) * sd / math.sqrt(M)
+    
+    return limite_inferior, limite_superior
+
+def ejecutar_ruta(G,ruta,matriz_dst):
+    """
+    Función que simula la ejecución de una ruta.
+    """
+    g = G.copy()
+    ruta = ruta.copy()
+    ruta.pop(0)
+    ruta.pop(-1)
+    ruta = [int(nodo[2:]) for nodo in ruta]
+    # distancia = calcular_largo_ruta(ruta, matriz_dst)
+    stock = 0
+    for nodo in ruta:
+        stock += g.nodes[f'N_{nodo}']['Up'] - G.nodes[f'N_{nodo}']['Inv']
+        g.nodes[f'N_{nodo}']['Inv'] = G.nodes[f'N_{nodo}']['Up']
+    g.nodes['N_0']['Inv'] -= stock
+    return g, stock
+
+def realizacion_demanda(G0, ruido = 0.05):
+    """
+    Función que simula la demanda de los locales para un determinado periodo.
+    """
+    grafo = G0.copy()
+    demandas = {nodo : [] for nodo in grafo.nodes() if nodo != 'N_0'}
+    insatisfecho = 0
+    for nodo in grafo.nodes(data=True):
+        # print(nodo)
+        if nodo[0] != 'N_0':
+            dem = max(
+                np.random.normal(loc = nodo[1]['Prod'], scale = nodo[1]['Prod'] * 0.05) 
+                + np.random.normal(loc = 0, scale = nodo[1]['Prod'] * 0.05)
+                ,0)
+            demandas[nodo[0]] = dem
+            if dem <= grafo.nodes[nodo[0]]['Inv']:
+                grafo.nodes[nodo[0]]['Inv'] -= dem
+
+            else:
+                grafo.nodes[nodo[0]]['Inv'] = 0
+                insatisfecho += dem - grafo.nodes[nodo[0]]['Inv']
+        # print(nodo[0],nodo[1]['Inv'])
+    # print(demandas)
+    return grafo, demandas, insatisfecho
+
+def reaccion_inventario(graf, mu, sd, alfa = 0.05):
+    """
+    Función que verifica que locales deben ser visitados en base a su inventario actual. 
+    En caso de que el inventario se encuentre bajo el umbral de tolerancia, se retorna True.
+    """
+    grafo = graf.copy()
+    visitas = {nodo : False for nodo in G.nodes()}
+    for nodo in grafo.nodes(data=True):
+        id_nodo = int(nodo[0][2:])-1
+        media = mu[id_nodo]
+        desviacion = sd[id_nodo]
+        s = media + norm.ppf((1 - alfa)/2)* desviacion  #Stock de seguridad
+        # print(f'{nodo[1]["Inv"]}, s{int(nodo[0][2:])} = {s}, {nodo[1]["Inv"] <= s}')
+        if nodo[1]["Inv"] <= s:
+            visitas[nodo[0]] = True
+            # print(f'Visitar {nodo[0]}')
+    # print(visitas)
+    return visitas
 
 
 # ubis, cap_tpte, info_locales = read_data('IRP1.xlsx')
