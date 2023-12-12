@@ -47,7 +47,7 @@ def aplicar_politica_estacionaria(G, info_locales, matriz_dst):
 
 
 def nearest_neighbor(
-    G, dist_matrix, demands={}, capacity=float("inf"), disponibilidad=None
+    G, dist_matrix, cap=np.inf, demands={}, disponibilidad=None,
 ):
     """
     Apply the Nearest Neighbor heuristic to find initial routes for VRP.
@@ -76,7 +76,7 @@ def nearest_neighbor(
         ruta = [nodo_actual]
         visitados[nodo_actual] = True
         # print('aca')
-        while True:  # capacidad_actual + demands[nodo_actual] <= capacity:
+        while True: #capacidad_actual + demands[int(nodo_actual[2:])] <= cap:
             actual = ruta[-1]
             cercano = None
             min_dist = float("inf")
@@ -174,9 +174,9 @@ def graficar_rutas(rutas, G):
     plt.show()
 
 
-def generar_ruta(G, matriz_dst, nodos_a_visitar):
+def generar_ruta(G, matriz_dst, nodos_a_visitar, cap):
     rutas_NN = nearest_neighbor(
-        G, dist_matrix=matriz_dst, disponibilidad = nodos_a_visitar
+        G, dist_matrix=matriz_dst, disponibilidad = nodos_a_visitar, cap =cap
     )
     # print( "Ruta NN: ")
     # print(rutas_NN[0])
