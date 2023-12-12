@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import os
 from scipy.stats import norm
+from matplotlib.colors import ListedColormap
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -343,6 +344,39 @@ def reaccion_inventario(graf, mu, sd, alfa=0.05):
             # print(f'Visitar {nodo[0]}')
     # print(visitas)
     return visitas
+
+
+def plotear_tablero_visitas(df, guardar=False, nombre="tablero_visitas.png"):
+    # Define colormap
+
+    cmap = ListedColormap(["w", "g"], N=2)
+
+    # Plot matrix
+    
+    fig, ax = plt.subplots(figsize=(30, 7))
+
+    if "sum" in df.columns:
+        df.drop("sum", axis=1, inplace=True)
+
+    N = len(df.columns)
+    
+    df_plot = df.T
+    df_plot["suma"] = df_plot.sum(axis=1)
+    df_plot.sort_values(by="suma", inplace=True, ascending=False)
+    df_plot.drop("suma", axis=1, inplace=True)
+    ax.imshow(df_plot, cmap=cmap, vmin=0, vmax=1, aspect="auto")
+    ax.set_title("Locales visitados por día")
+    ax.set_xlabel("Días")
+    ax.set_ylabel("Locales")
+    ax.set_yticks(np.arange(N))
+    ax.set_yticklabels(list(df_plot.index))
+    ax.set_xticks(np.arange(0, len(df), 5))
+
+    if guardar:
+        # el nombre debería incluir la instancia y la politica inicial
+        plt.savefig(nombre)
+
+    plt.show()
 
 
 # ubis, cap_tpte, info_locales = read_data('IRP1.xlsx')
