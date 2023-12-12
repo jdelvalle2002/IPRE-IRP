@@ -12,7 +12,6 @@ import random
 from matplotlib import pyplot as plt
 import numpy as np
 
-from instancia import crear_grafo_inicial
 from solvers_listos import (simular_demanda_diaria)
 
 from funciones import (
@@ -21,7 +20,8 @@ from funciones import (
     calcular_matriz_dist,
     calcular_largo_ruta,
     graficar_ruta,
-    calcular_matriz_dist_alns
+    calcular_matriz_dist_alns,
+    crear_grafo_inicial
 )
 
 random.seed(42)
