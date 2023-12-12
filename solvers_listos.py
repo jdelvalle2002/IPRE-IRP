@@ -115,7 +115,7 @@ def nearest_neighbor(
 
 def two_opt(ruta_inicial, matriz_dst, iters):
     ruta_2opt = ruta_inicial.copy()
-
+    
     for k in range(iters):
         i, j = np.random.randint(1, len(ruta_2opt) - 1, size=2)
         if j < i:
