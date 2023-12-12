@@ -345,10 +345,25 @@ def reaccion_inventario(graf, mu, sd, alfa=0.05):
     # print(visitas)
     return visitas
 
+def generar_df(rutas, N):
+
+    rutas_bool = dict()
+    for ruta, nodos in rutas.items():
+        bools = dict()
+        for i in range(1, N+1):
+            if f'N_{i}' in nodos:
+                bools[f'N_{i}'] = 1
+            else:
+                bools[f'N_{i}'] = 0
+        rutas_bool[ruta] = bools
+    
+    df = pd.DataFrame.from_dict(rutas_bool, orient='index')
+    
+    df.rename(columns={'index': 'Ruta', 0: 'Nodo'}, inplace=True)
+    df.rename_axis('Ruta', inplace=True)
+    return df
 
 def plotear_tablero_visitas(df, guardar=False, nombre="tablero_visitas.png"):
-    # Define colormap
-
     cmap = ListedColormap(["w", "g"], N=2)
 
     # Plot matrix
@@ -378,7 +393,29 @@ def plotear_tablero_visitas(df, guardar=False, nombre="tablero_visitas.png"):
 
     plt.show()
 
-
+def dispersion_intervalos(df):
+    '''
+    Función que calcula la cantidad promedio de días entre visitas a cada local.
+    También entrega la desviación estándar de los intervalos.
+    '''
+    df = df.copy()
+    if 'sum' in df.columns:
+        df.drop('sum', axis=1, inplace=True)
+    datos = {nodo: {'mean': None, 'std': None} for nodo in df.columns}
+    for nodo in df.columns:
+        largos = []
+        ultima_visita = 0
+        for dia in range(len(df)):
+            if df[nodo][dia] == 1:
+                if dia - ultima_visita > 3:
+                    #print(f'El local {nodo} no fue visitado por {dia - ultima_visita} días')
+                    pass
+                largos.append(dia - ultima_visita)
+                ultima_visita = dia
+        datos[nodo]['mean'] = np.mean(largos)
+        datos[nodo]['std'] = np.std(largos)
+    datos_df = pd.DataFrame.from_dict(datos, orient='index')
+    return datos_df
 # ubis, cap_tpte, info_locales = read_data('IRP1.xlsx')
 
 # G = nx.DiGraph()
