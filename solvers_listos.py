@@ -115,21 +115,24 @@ def nearest_neighbor(
 
 def two_opt(ruta_inicial, matriz_dst, iters):
     ruta_2opt = ruta_inicial.copy()
-    
-    for k in range(iters):
-        i, j = np.random.randint(1, len(ruta_2opt) - 1, size=2)
-        if j < i:
-            i, j = j, i
 
-        nueva_ruta = ruta_2opt.copy()
-        nueva_ruta[i:j] = ruta_2opt[j - 1 : i - 1 : -1]
+    if len(ruta_2opt) - 1 <= 1:
+        pass
+    else:
+        for k in range(iters):
+            i, j = np.random.randint(1, len(ruta_2opt) - 1, size=2)
+            if j < i:
+                i, j = j, i
 
-        if calcular_largo_ruta(nueva_ruta, matriz_dst) < calcular_largo_ruta(
-            ruta_2opt, matriz_dst
-        ):
-            # print("Ruta anterior: ", ruta_2opt)
-            # print("Mejora encontrada -> Nueva ruta: ", nueva_ruta)
-            ruta_2opt = nueva_ruta
+            nueva_ruta = ruta_2opt.copy()
+            nueva_ruta[i:j] = ruta_2opt[j - 1 : i - 1 : -1]
+
+            if calcular_largo_ruta(nueva_ruta, matriz_dst) < calcular_largo_ruta(
+                ruta_2opt, matriz_dst
+            ):
+                # print("Ruta anterior: ", ruta_2opt)
+                # print("Mejora encontrada -> Nueva ruta: ", nueva_ruta)
+                ruta_2opt = nueva_ruta
 
     return ruta_2opt
 
