@@ -203,30 +203,81 @@ def calcular_matriz_dist_alns(G):
     return matriz_distancias
 
 
-def simular_demanda_previa(G, dist="n", T=100, ruido=0):
+def simular_demanda_previa(G, dist="n", T=100, ruido=0, P=1):
     """
     Función que simula la demanda previa de los locales.
+    """
+    # r = {nodo : nodo[1]['Prod'] for nodo in G.nodes(data=True)}
+    if dist == "n":
+        demandas = demanda_estable(G, T=T, ruido=ruido)
+    elif dist == "c": # peak central
+        demandas = demanda_peak_central(G, T=T, ruido=ruido)
+    elif dist == "o": # oscilante
+        demandas = demanda_oscilante(G, T=T, ruido=ruido, P=P)       
+
+    return demandas
+
+def demanda_estable(G, T=100, ruido=0):
+    """
+    Función que simula la demanda previa de los locales asumiendo que es constante.
     """
     g = G.copy()
     demandas = {nodo: [] for nodo in g.nodes() if nodo != "N_0"}
     # r = {nodo : nodo[1]['Prod'] for nodo in G.nodes(data=True)}
-    if dist == "n":
-        for nodo in g.nodes(data=True):
-            # print(nodo[0],nodo[1]['Prod'])
-            if nodo[0] != "N_0":
-                dem_pasadas = [
-                    max(
-                        np.random.normal(
-                            loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05
-                        )
-                        + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido),
-                        0,
+    for nodo in g.nodes(data=True):
+        # print(nodo[0],nodo[1]['Prod'])
+        if nodo[0] != "N_0":
+            dem_pasadas = [
+                max(
+                    np.random.normal(
+                        loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05
                     )
-                    for _ in range(T)
-                ]
-                demandas[nodo[0]] = dem_pasadas
+                    + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido),
+                    0,
+                )
+                for _ in range(T)
+            ]
+            demandas[nodo[0]] = dem_pasadas
+    return demandas
+    
+def demanda_peak_central(G, T=100, ruido=0):
+    """
+    Función que simula la demanda previa de los locales asumiendo que es constante, con un peak central por tramos.
+    """
+    g = G.copy()
+    demandas = {nodo: [] for nodo in g.nodes() if nodo != "N_0"}
+    # r = {nodo : nodo[1]['Prod'] for nodo in G.nodes(data=True)}
+    for nodo in g.nodes(data=True):
+        # print(nodo[0],nodo[1]['Prod'])
+        if nodo[0] != "N_0":
+            dem_pasadas = []
+            for t in range(T):
+                if t >= 0.4*T and t <= 0.45*T :
+                    dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"]*1.25, scale=nodo[1]["Prod"] * 0.05) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+                elif t >= 0.55*T and t <= 0.6*T :
+                    dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"]*1.25, scale=nodo[1]["Prod"] * 0.05) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+                elif t >= 0.45*T and t <= 0.55*T :
+                    dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"]*1.5, scale=nodo[1]["Prod"] * 0.05) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+                else:
+                    dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+
+            demandas[nodo[0]] = dem_pasadas
     return demandas
 
+def demanda_oscilante(G, T=100, ruido=0, P = 1):
+    """
+    Función que simula demanda que oscila en el tiempo con un comportamiento sinusoidal. P corresponde a la cantidad de peaks.
+    """
+    g = G.copy()
+    demandas = {nodo: [] for nodo in g.nodes() if nodo != "N_0"}
+    # r = {nodo : nodo[1]['Prod'] for nodo in G.nodes(data=True)}
+    for nodo in g.nodes(data=True):
+        if nodo[0] != "N_0":
+            dem_pasadas = []
+            for t in range(T):
+                dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) * (1 + 0.5 * math.sin(math.pi * t * P / T)) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+            demandas[nodo[0]] = dem_pasadas
+    return demandas
 
 def smooth(y, box_pts):
     box = np.ones(box_pts) / box_pts
@@ -299,9 +350,9 @@ def ejecutar_ruta(G, ruta, matriz_dst):
     return g, stock
 
 
-def realizacion_demanda(G0, ruido=0.05):
+def realizacion_demanda(G0, ruido=0.05, dist="n", T=100, P=1):
     """
-    Función que simula la demanda de los locales para un determinado periodo.
+    Función que simula la demanda de los locales para un determinado periodo, recibe el tipo de demanda y los parámetros correspondientes.
     """
     grafo = G0.copy()
     demandas = {nodo: [] for nodo in grafo.nodes() if nodo != "N_0"}
