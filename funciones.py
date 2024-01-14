@@ -311,7 +311,7 @@ def realizacion_demanda(G0, ruido=0.05):
         if nodo[0] != "N_0":
             dem = max(
                 np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05)
-                + np.random.normal(loc=0, scale=nodo[1]["Prod"] * 0.05),
+                + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido),
                 0,
             )
             demandas[nodo[0]] = dem
