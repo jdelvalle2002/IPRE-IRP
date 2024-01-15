@@ -352,7 +352,7 @@ def ejecutar_ruta(G, ruta, matriz_dst):
 
 def realizacion_demanda(G0, ruido=0.05, dist="n", T=100, P=1):
     """
-    Función que simula la demanda de los locales para un determinado periodo, recibe el tipo de demanda y los parámetros correspondientes.
+    Función que simula la demanda de los locales para un determinado periodo.
     """
     grafo = G0.copy()
     demandas = {nodo: [] for nodo in grafo.nodes() if nodo != "N_0"}
@@ -376,6 +376,36 @@ def realizacion_demanda(G0, ruido=0.05, dist="n", T=100, P=1):
     # print(demandas)
     return grafo, demandas, insatisfecho
 
+def realizacion_demanda_modificada(G0, ruido=0.05, dist="n", T=100, P=1, demandas_in = {}, t=0):
+    """
+    Función que simula la demanda de los locales para un determinado periodo, recibe el tipo de demanda y los parámetros correspondientes.
+    """
+
+    grafo = G0.copy()
+    demandas = {nodo: [] for nodo in grafo.nodes() if nodo != "N_0"}
+    insatisfecho = 0
+
+    for nodo in grafo.nodes(data=True):
+        if nodo[0] != "N_0":
+            if dist == "n":
+                dem = max(
+                    np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05)
+                    + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido),
+                    0,
+                )
+            elif dist == "c": # peak central
+                dem = demandas_in[nodo[0]][t]
+            elif dist == "o": # oscilante
+                dem = demandas_in[nodo[0]][t]
+
+            demandas[nodo[0]] = dem
+            if dem <= grafo.nodes[nodo[0]]["Inv"]:
+                grafo.nodes[nodo[0]]["Inv"] -= dem
+            else:
+                grafo.nodes[nodo[0]]["Inv"] = 0
+                insatisfecho += dem - grafo.nodes[nodo[0]]["Inv"]   
+    
+    return grafo, demandas, insatisfecho
 
 def reaccion_inventario(graf, mu, sd, alfa=0.05):
     """
