@@ -275,7 +275,9 @@ def demanda_oscilante(G, T=100, ruido=0, P = 1):
         if nodo[0] != "N_0":
             dem_pasadas = []
             for t in range(T):
-                dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) * (1 + 0.5 * math.sin(math.pi * t * P / T)) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+                dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) 
+                                       * (1 + 0.5 * math.sin(math.pi * t * P / T)) 
+                                       + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
             demandas[nodo[0]] = dem_pasadas
     return demandas
 
