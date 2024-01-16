@@ -203,7 +203,7 @@ def calcular_matriz_dist_alns(G):
     return matriz_distancias
 
 
-def simular_demanda_previa(G, dist="n", T=100, ruido=0, P=1):
+def simular_demanda_previa(G, dist="n", T=100, ruido=0, d=1):
     """
     Función que simula la demanda previa de los locales.
     """
@@ -213,7 +213,7 @@ def simular_demanda_previa(G, dist="n", T=100, ruido=0, P=1):
     elif dist == "c": # peak central
         demandas = demanda_peak_central(G, T=T, ruido=ruido)
     elif dist == "o": # oscilante
-        demandas = demanda_oscilante(G, T=T, ruido=ruido, P=P)       
+        demandas = demanda_oscilante(G, T=T, ruido=ruido, d=d)       
 
     return demandas
 
@@ -275,7 +275,7 @@ def demanda_oscilante(G, T=100, ruido=0, d=30):
         if nodo[0] != "N_0":
             dem_pasadas = []
             for t in range(T):
-                dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) * (1 + 0.25 * math.sin(math.pi * t * 2 * d)) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+                dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) * (1 + 0.2 * math.sin(math.pi * t * 2 / d)) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
             demandas[nodo[0]] = dem_pasadas
     return demandas
 
