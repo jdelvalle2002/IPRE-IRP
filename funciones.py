@@ -264,7 +264,7 @@ def demanda_peak_central(G, T=100, ruido=0):
             demandas[nodo[0]] = dem_pasadas
     return demandas
 
-def demanda_oscilante(G, T=100, ruido=0, P = 1):
+def demanda_oscilante(G, T=100, ruido=0, d=30):
     """
     Función que simula demanda que oscila en el tiempo con un comportamiento sinusoidal. P corresponde a la cantidad de peaks.
     """
@@ -275,7 +275,7 @@ def demanda_oscilante(G, T=100, ruido=0, P = 1):
         if nodo[0] != "N_0":
             dem_pasadas = []
             for t in range(T):
-                dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) * (1 + 0.5 * math.sin(math.pi * t * P / T)) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+                dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) * (1 + 0.25 * math.sin(math.pi * t * 2 * d)) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
             demandas[nodo[0]] = dem_pasadas
     return demandas
 
@@ -376,7 +376,7 @@ def realizacion_demanda(G0, ruido=0.05, dist="n", T=100, P=1):
     # print(demandas)
     return grafo, demandas, insatisfecho
 
-def realizacion_demanda_modificada(G0, ruido=0.05, dist="n", T=100, P=1, demandas_in = {}, t=0):
+def realizacion_demanda_modificada(G0, ruido=0.05, dist="n", T=100, d=30, demandas_in = {}, t=0):
     """
     Función que simula la demanda de los locales para un determinado periodo, recibe el tipo de demanda y los parámetros correspondientes.
     """
