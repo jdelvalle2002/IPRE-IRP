@@ -114,7 +114,10 @@ def calcular_largo_ruta(ruta, matriz_dist):
     """
     sum_dist = 0
     num_puntos = len(ruta)
-
+    # introducimos excepcion para rutas falsas
+    if len(set(ruta)) < 2:
+        return 0
+    
     for i in range(num_puntos - 1):
         nodo = ruta[i]
         next_nodo = ruta[i + 1]
@@ -336,17 +339,23 @@ def ejecutar_ruta(G, ruta, matriz_dst):
     """
     Función que simula la ejecución de una ruta.
     """
+    stock = 0
     g = G.copy()
     ruta = ruta.copy()
+    if len(ruta) < 2 or ruta == ['N_0','N_0']:
+        g.nodes["N_0"]["Inv"] -= stock
+        return g, stock
     ruta.pop(0)
     ruta.pop(-1)
     ruta = [int(nodo[2:]) for nodo in ruta]
     # distancia = calcular_largo_ruta(ruta, matriz_dst)
-    stock = 0
+    
     for nodo in ruta:
         stock += g.nodes[f"N_{nodo}"]["Up"] - G.nodes[f"N_{nodo}"]["Inv"]
         g.nodes[f"N_{nodo}"]["Inv"] = G.nodes[f"N_{nodo}"]["Up"]
+    
     g.nodes["N_0"]["Inv"] -= stock
+
     return g, stock
 
 
@@ -497,51 +506,10 @@ def dispersion_intervalos(df):
         datos[nodo]['std'] = np.std(largos)
     datos_df = pd.DataFrame.from_dict(datos, orient='index')
     return datos_df
-# ubis, cap_tpte, info_locales = read_data('IRP1.xlsx')
 
-# G = nx.DiGraph()
-# color_nodos = []
-# color_arcos = []
-# ancho_edges = []
+def calcular_costo_consolidado(costos, inventarios):
+    costo_rutas = np.sum(costos[1]) / 10e6
+    costo_inventario = np.sum(inventarios)*2 / 10e6
+    costo_SO = np.sum(costos[0]) * 3/ 10e6
 
-# for local in info_locales.itertuples():
-#     # print(local.i)
-#     G.add_node(f"N_{local.i}", Inv = local.I, Up = local.U, Low = local.L, Prod = local.r, h = local.h,
-#         coord_x = local.X, coord_y = local.Y, pos = (local.X, local.Y))
-#     if local.i != 0:
-#         color_nodos.append('blue')
-#     else:
-#         color_nodos.append('red')
-
-# e=0
-# for local in G.nodes():
-#     for nodo in G.nodes():
-#         if local != nodo:
-#             decision = np.random.binomial(1, 0.7)
-#             if decision == 1 and local != 'N_0' and nodo != 'N_0':
-#                 dist = calcular_distancia(G.nodes[local]['pos'], G.nodes[nodo]['pos'])
-#                 G.add_edge(local, nodo, weight=dist)
-#                 e +=1
-#                 # ancho_edges.append(dist/1000)
-#                 ancho_edges.append(0.25)
-#                 color_arcos.append('gray')
-#             elif local == 'N_0':
-#                 G.add_edge(local, nodo, weight=calcular_distancia(G.nodes[local]['pos'], G.nodes[nodo]['pos']))
-#                 e +=1
-#                 ancho_edges.append(1)
-#                 color_arcos.append('black')
-#             else:
-#                 ancho_edges.append(0)
-
-# #     for j in range(len(ubis)):
-# #         if i != j:
-# #             decision = np.random.binomial(1, 0.7)
-# #             if decision == 1:
-# #                 print(i, j)
-# #                 G.add_edge(i, j, weight=random.randint(1, 10))
-
-# plt.figure(figsize=(5,5))
-# # nx.draw(G, with_labels=True, node_size=18, node_color=color_nodos, font_size=15, edge_color=ancho_edges, width=ancho_edges, edge_cmap=plt.cm.Greys)
-# pos=nx.get_node_attributes(G,'pos')
-# nx.draw(G, pos=pos, with_labels=True, node_size=18, font_size=15, node_color=color_nodos, width=ancho_edges, edge_color=color_arcos)
-# plt.show()
+    return {'costo_rutas': costo_rutas, 'costo_inventario': costo_inventario, 'costo_SO': costo_SO}
