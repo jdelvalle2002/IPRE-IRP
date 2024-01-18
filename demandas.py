@@ -61,11 +61,11 @@ def demanda_peak_central(G, T=100, ruido=0):
         if nodo[0] != "N_0":
             dem_pasadas = []
             for t in range(T):
-                if t >= 0.4*T and t <= 0.45*T :
+                if 0.4*T <= t <= 0.45*T:
                     dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"]*1.25, scale=nodo[1]["Prod"] * 0.05) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
-                elif t >= 0.55*T and t <= 0.6*T :
+                elif 0.55*T <= t <= 0.6*T:
                     dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"]*1.25, scale=nodo[1]["Prod"] * 0.05) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
-                elif t >= 0.45*T and t <= 0.55*T :
+                elif 0.45*T <= t <= 0.55*T:
                     dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"]*1.5, scale=nodo[1]["Prod"] * 0.05) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
                 else:
                     dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
@@ -97,7 +97,7 @@ def demanda_diagonal(G, T=100, ruido = 0):
             dem_pasadas = []
             for t in range(T):
                 dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.01) 
-                                       * (0.1 * nodo[1]["Prod"] + 1.9*nodo[1]["Prod"] * t/T) 
+                                       * (0.1 * nodo[1]["Prod"] + 1.9*nodo[1]["Prod"] * t/T) # REVISAR IMPLEMENTACIÓN	
                                        + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
             demandas[nodo[0]] = dem_pasadas
     return demandas

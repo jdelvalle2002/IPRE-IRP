@@ -329,6 +329,8 @@ def realizacion_demanda_modificada(G0, ruido=0.05, dist="n", T=100, d=30, demand
                 dem = demandas_in[nodo[0]][t]
             elif dist == "o": # oscilante
                 dem = demandas_in[nodo[0]][t]
+            elif dist == "d": # diagonal
+                dem = demandas_in[nodo[0]][t]
 
             demandas[nodo[0]] = dem
             if dem <= grafo.nodes[nodo[0]]["Inv"]:
