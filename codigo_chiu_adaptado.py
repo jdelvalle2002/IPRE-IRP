@@ -178,12 +178,6 @@ class IRP:
 
         if self.option == 5:
             self.x_, self.q_, self.y_, gap, pred = Solve_IRP_SS(sets, params, probs, status, t0 = self.t, horizon = 3)
-        elif self.option == 20:
-            self.x_, self.q_, self.y_, gap, pred = Solve_IRP_RP_SS(sets, params, probs, status, t0 = self.t, detailed_horizon = 1, approximated_horizon = 2, cost_function_params = self.cost_function)
-        elif self.option == 23:
-            self.x_, self.q_, self.y_, gap, pred = Solve_IRP_RP_SS(sets, params, probs, status, t0 = self.t, detailed_horizon = 2, approximated_horizon = 1, cost_function_params = self.cost_function)
-        elif self.option == 31:
-            self.x_, self.q_, self.y_, gap, pred = Solve_IRP_SS_HEUR(sets, params, probs, status, t0 = self.t, horizon = 3)
 
 
         self.gap_hist[self.t + 1] = gap
@@ -823,46 +817,63 @@ results = {col: [] for col in cols}
 
 dis_cols = ['ID', 'CID', '|C|', '|K|', 'OPTION', 'INVENTORY', 'LOST SALES', 'ROUTING', 'TOTAL COST', 'QUANTITY', 'VISITS', 'PREDICTIONS','FULL DEMAND', 'LOST DEMAND', 'FILL RATE', 'MIP GAP','PERIOD']
 dis_results = {col: [] for col in dis_cols}
+def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, tipo_demanda = dem, T = 365, d=30, F=7)
+    
+    G0 = grafo_inicial.copy()
+    matriz_dst = calcular_matriz_dist(G0)
+    ubicaciones = list(G0.nodes()) # Lista de ubicaciones
+    inventarios = [[G0.nodes(data=True)[i]['Inv'] for i in ubicaciones]] # Lista de inventarios
+    h = [G0.nodes(data=True)[i]['h'] for i in ubicaciones] # Lista de costos de inventario
+    rutas = {t : [] for t in range(T)} # Lista de rutas
 
-for cid in range(1): #no considerar
+    
+    
+    
+
+
+
+
+
+
+
+
     for n_clients in [10]:
         for n_vehicles in [2]:
-            options = [5, 31]
+            op = 5
 
-            for op in options:
-                for vid in [0]:
+            for vid in [0]:
 
-                    dir = 'Archivos pickle/'
-                    name = 'I{}-K{}-V{}'.format(n_clients, n_vehicles, vid + 1)
-                    rd = pd.read_pickle(dir + 'SDEMAND-{}.pickle'.format(name))
-                    cost_params = pd.read_pickle(dir + 'cost_params_ocf-I{}-K{}-V{}.pickle'.format(n_clients, n_vehicles, vid + 1))
+                dir = 'Archivos pickle/'
+                name = 'I{}-K{}-V{}'.format(n_clients, n_vehicles, vid + 1)
+                rd = pd.read_pickle(dir + 'SDEMAND-{}.pickle'.format(name))
+                cost_params = pd.read_pickle(dir + 'cost_params_ocf-I{}-K{}-V{}.pickle'.format(n_clients, n_vehicles, vid + 1))
 
-                    #Simulacion
-                    problem = IRP(dir + name + '.pickle', rd, op, cost_params)
-                    simulation = Simulation()
-                    toc = time.time()
-                    simulation.run(problem)
-                    tic = time.time()
+                #Simulacion
+                problem = IRP(dir + name + '.pickle', rd, op, cost_params)
+                simulation = Simulation()
+                toc = time.time()
+                simulation.run(problem)
+                tic = time.time()
 
-                    problem.get_total_costs()
+                problem.get_total_costs()
 
-                    #Exportar resultados
-                    results['ID'].append(vid + 1)
-                    results['CID'].append(cid + 1)
-                    results['|C|'].append(len(problem.C))
-                    results['|K|'].append(len(problem.K))
-                    results['OPTION'].append(option_names[op])
-                    results['INVENTORY'].append(problem.inventory_costs)
-                    results['LOST SALES'].append(problem.lost_sales_costs)
-                    results['ROUTING'].append(problem.routing_costs)
-                    results['TOTAL COST'].append(problem.total_costs)
-                    results['TIME'].append(tic-toc)
-                    df = pd.DataFrame(data=results)
-                    df.to_csv('Results/d_reults_I{}.csv'.format(n_clients), decimal = ',', sep = '\t')
-
+                #Exportar resultados
+                results['ID'].append(vid + 1)
+                results['CID'].append(cid + 1)
+                results['|C|'].append(len(problem.C))
+                results['|K|'].append(len(problem.K))
+                results['OPTION'].append(option_names[op])
+                results['INVENTORY'].append(problem.inventory_costs)
+                results['LOST SALES'].append(problem.lost_sales_costs)
+                results['ROUTING'].append(problem.routing_costs)
+                results['TOTAL COST'].append(problem.total_costs)
+                results['TIME'].append(tic-toc)
+                df = pd.DataFrame(data=results)
+                df.to_csv('Results/d_reults_I{}.csv'.format(n_clients), decimal = ',', sep = '\t')
 
 
-                    df = pd.DataFrame(data=dis_results)
-                    df.to_csv('Results/d_dis_reults_I{}.csv'.format(n_clients), decimal = ',', sep = '\t')
+
+                df = pd.DataFrame(data=dis_results)
+                df.to_csv('Results/d_dis_reults_I{}.csv'.format(n_clients), decimal = ',', sep = '\t')
 
 # %%
