@@ -61,6 +61,10 @@ import math
 
 from gurobipy import *
 from statistics import mean
+<<<<<<< HEAD
+=======
+from funciones import *
+>>>>>>> 7958b871f0e863ac9f6a46fd3d57cc9f2c2e5468
 
 
 
@@ -826,16 +830,119 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, 
     h = [G0.nodes(data=True)[i]['h'] for i in ubicaciones] # Lista de costos de inventario
     rutas = {t : [] for t in range(T)} # Lista de rutas
 
+<<<<<<< HEAD
+    
+=======
+    inventario_total = []
+    perdidas = []
+    c_rutas =[]
+    demandas_efectivas = []
+    costo_rutas = 0
+    costo_SO = 0
+
+    #self.T = unpickled['Sets']['T'] #periodos
+    #self.C = unpickled['Sets']['C'] #clientes
+    #self.N = unpickled['Sets']['N'] #nodos
+    #self.A = unpickled['Sets']['A'] #arcos
+    #self.K = unpickled['Sets']['K'] #vehiculos
+
+    #Parameters
+    #h = unpickled['Param']['h'] #costo de inventario
+    #self.Q = unpickled['Param']['Q'] #capacidad de vehiculo
+    #self.cap = unpickled['Param']['cap'] #capacidad de bodega
+    #self.pos = unpickled['Pos']['pos'] #matriz de posiciones en el plano cartesiano
+    #self.c = unpickled['Pos']['cost'] #matriz de costos de transporte
+    #self.h = {i: h[i] for i in self.N for t in self.T} #costo de inventario
+    #self.a = unpickled['Param']['a'] #costo de demanda insatisfecha
+    #self.r = unpickled['Param']['r'] #cantidad de unidades que llegan al depot en cada periodo
+    for t in range(T):
+        print('\n')
+        mu_demanda = [np.mean(dem_historico[nodo]) for nodo in dem_historico.keys()]    
+        sd_demanda = [np.std(dem_historico[nodo]) for nodo in dem_historico.keys()]
+        pronostico = {int(nodo[2:]): pronostico_SEDA(
+                                    dem_historico[nodo], T = F, pron = True, alpha=0.2, beta=0.1, theta=0.5)[0]
+                                    for nodo in dem_historico.keys()}
+        # print(pronostico)
+        pronostico = adaptar_pron(pronostico, F)
+
+        # ahora incluimos el modelo de optimización
+        params = {}
+        params['Q'] = capacidad
+        params['cap'] = {i: G.nodes(data=True)[i]['Up'] for i in ubicaciones}
+        params['c'] = matriz_dst
+        params['h'] = h
+        params['a'] = 10 # REVISAR ESTE COSTO
+        params['r'] = 30 # revisar esto también, HAY QUE CAMBIARLO
+        params['pos'] = {i: G.nodes(data=True)[i]['pos'] for i in ubicaciones}
+
+        sets = {}
+        sets['T'] = [t + t_i for t_i in range(F)]
+        sets['C'] = [i for i in ubicaciones if i != 'N_0']
+        sets['N'] = ubicaciones
+        sets['A'] = [e for e in G0.edges()]
+        sets['K'] = 1
+
+        status = {i: G0.nodes(data=True)[i]['Inv'] for i in ubicaciones} # MODIFICAR!!!
+
+        PROBS = {}
+
+        solucion = Solve_IRP_SS(sets, params, probs, status, t0 = t, horizon = F)
+
+        # print(f"solucion = {solucion}")
+
+        cr = calcular_largo_ruta(ruta_P, distancias)
+        c_rutas.append(cr)
+        costo_rutas += cr
+
+        if ruta_P != [] and ruta_P != None and ruta_P != ['N_0']:
+             ruta_P += ['N_0']
+             G0, stock = ejecutar_ruta(G0, ruta_P, distancias)
+        
+        elif ruta_P == ['N_0'] or ruta_P == ['N_0','N_0']:
+            ruta_P = []
+
+        rutas[t] = ruta_P
+        # print(f"Ruta {t}: ", ruta_P)
+        # visitas_proactiva = proactiva_inventario(G0, tolerancia = 0.2, dist = 'n', mu = 0, sigma = 0.1, M = 1000)
+
+        G0, demanda, insatisfecho = realizacion_demanda_modificada(G0, dist = tipo_demanda, T=T, demandas_in=dem_historico, d=d, t=t)
+        demandas_efectivas.append(demanda)
+        costo_SO += insatisfecho*1
+        d_total += sum(demanda.values())
+        inventarios = [G0.nodes(data=True)[i]['Inv'] for i in ubicaciones if i != 'N_0']
+        inventario_total.append(sum(inventarios))
+        perdidas.append(insatisfecho)
+
+        print(f'Tiempo: {t} | Ruta: {ruta_P} | costo_SO: {insatisfecho*1} | costo_r: {cr}')
+        #Actualizo demandas
+        for nodo in ubicaciones:
+            if nodo != 'N_0':
+                dem_historico[nodo].append(demanda[nodo]) 
+                # HAY QUE VER CÓMO SE COMPORTA ESTO CON LA DEMANDA MODIFICADA
+
+    # print('\n')
+    # print("Inventario final: ")
+    # for nodo in G0.nodes(data=True):
+    #     print(nodo[0],nodo[1]['Inv'])
+    print(f'F = {F}, Demanda perdida total: {sum(perdidas)} | Demanda perdida promedio: {sum(perdidas)/T}')        
+    print(f'Costo ruta: {costo_rutas} | Costo SO: {costo_SO}')
+    # graficar_rutas(rutas, G0)
+    costos = (perdidas, c_rutas)
+    return rutas, perdidas, inventario_total, costos, demandas_efectivas
+>>>>>>> 7958b871f0e863ac9f6a46fd3d57cc9f2c2e5468
     
     
-    
 
 
 
 
 
 
+<<<<<<< HEAD
 
+=======
+"""
+>>>>>>> 7958b871f0e863ac9f6a46fd3d57cc9f2c2e5468
 
     for n_clients in [10]:
         for n_vehicles in [2]:
@@ -875,5 +982,9 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, 
 
                 df = pd.DataFrame(data=dis_results)
                 df.to_csv('Results/d_dis_reults_I{}.csv'.format(n_clients), decimal = ',', sep = '\t')
+<<<<<<< HEAD
 
+=======
+"""
+>>>>>>> 7958b871f0e863ac9f6a46fd3d57cc9f2c2e5468
 # %%
