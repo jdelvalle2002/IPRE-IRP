@@ -14,7 +14,6 @@ from matplotlib.colors import ListedColormap
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-
 def read_data(filename):
     """
     Read coordinates and demand values from a specific sheet in an Excel file.

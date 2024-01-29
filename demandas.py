@@ -24,6 +24,8 @@ def simular_demanda_previa(G, dist="n", T=100, ruido=0, d=1):
         demandas = demanda_oscilante(G, T=T, ruido=ruido, d=d)       
     elif dist == "d": # diagonal
         demandas = demanda_diagonal(G, T=T, ruido=ruido)    
+    elif dist == "pir":
+        demandas = demanda_piramide(G, T=T, ruido=ruido)
     return demandas
 
 def demanda_estable(G, T=100, ruido=0):
@@ -84,7 +86,7 @@ def demanda_oscilante(G, T=100, ruido=0, d=30):
         if nodo[0] != "N_0":
             dem_pasadas = []
             for t in range(T):
-                dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) * (1 + 0.2 * math.sin(math.pi * t * 2 / d)) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+                dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.05) * (1 + 0.5 * math.sin(math.pi * t * 2 / d)) + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
             demandas[nodo[0]] = dem_pasadas
     return demandas
 
@@ -98,6 +100,25 @@ def demanda_diagonal(G, T=100, ruido = 0):
             for t in range(T):
                 dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.01) 
                                        * (0.1 * nodo[1]["Prod"] + 1.9*nodo[1]["Prod"] * t/T) # REVISAR IMPLEMENTACIÓN	
+                                       + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+            demandas[nodo[0]] = dem_pasadas
+    return demandas
+
+def demanda_piramide(G, T=100, ruido = 0):
+    g = G.copy()
+    demandas = {nodo: [] for nodo in g.nodes() if nodo != "N_0"}
+    # r = {nodo : nodo[1]['Prod'] for nodo in G.nodes(data=True)}
+    for nodo in g.nodes(data=True):
+        if nodo[0] != "N_0":
+            dem_pasadas = []
+            for t in range(T):
+                if t < T/2:
+                    dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.01) 
+                                       * (0.5 * nodo[1]["Prod"] + 1.5*nodo[1]["Prod"] * t/T) # REVISAR IMPLEMENTACIÓN	
+                                       + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
+                else:
+                    dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.01) 
+                                       * (0.5 * nodo[1]["Prod"] + 1.5*nodo[1]["Prod"] * t/T) # REVISAR IMPLEMENTACIÓN	
                                        + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
             demandas[nodo[0]] = dem_pasadas
     return demandas
