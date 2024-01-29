@@ -834,7 +834,21 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, 
     costo_rutas = 0
     costo_SO = 0
 
+    #self.T = unpickled['Sets']['T'] #periodos
+    #self.C = unpickled['Sets']['C'] #clientes
+    #self.N = unpickled['Sets']['N'] #nodos
+    #self.A = unpickled['Sets']['A'] #arcos
+    #self.K = unpickled['Sets']['K'] #vehiculos
 
+    #Parameters
+    #h = unpickled['Param']['h'] #costo de inventario
+    #self.Q = unpickled['Param']['Q'] #capacidad de vehiculo
+    #self.cap = unpickled['Param']['cap'] #capacidad de bodega
+    #self.pos = unpickled['Pos']['pos'] #matriz de posiciones en el plano cartesiano
+    #self.c = unpickled['Pos']['cost'] #matriz de costos de transporte
+    #self.h = {i: h[i] for i in self.N for t in self.T} #costo de inventario
+    #self.a = unpickled['Param']['a'] #costo de demanda insatisfecha
+    #self.r = unpickled['Param']['r'] #cantidad de unidades que llegan al depot en cada periodo
     for t in range(T):
         print('\n')
         mu_demanda = [np.mean(dem_historico[nodo]) for nodo in dem_historico.keys()]    
@@ -845,8 +859,31 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, 
         # print(pronostico)
         pronostico = adaptar_pron(pronostico, F)
 
-        ruta_P = ruteo_LS(H = G0, distancias = distancias, pron_demandas = pronostico,
-                           cap = cap, F = F, mu = mu_demanda, sd =sd_demanda)
+        # ahora incluimos el modelo de optimización
+        params = {}
+        params['Q'] = capacidad
+        params['cap'] = {i: G.nodes(data=True)[i]['Up'] for i in ubicaciones}
+        params['c'] = matriz_dst
+        params['h'] = h
+        params['a'] = 10 # REVISAR ESTE COSTO
+        params['r'] = 30 # revisar esto también, HAY QUE CAMBIARLO
+        params['pos'] = {i: G.nodes(data=True)[i]['pos'] for i in ubicaciones}
+
+        sets = {}
+        sets['T'] = [t + t_i for t_i in range(F)]
+        sets['C'] = [i for i in ubicaciones if i != 'N_0']
+        sets['N'] = ubicaciones
+        sets['A'] = [e for e in G0.edges()]
+        sets['K'] = 1
+
+        status = {i: G0.nodes(data=True)[i]['Inv'] for i in ubicaciones} # MODIFICAR!!!
+
+        PROBS = {}
+
+        solucion = Solve_IRP_SS(sets, params, probs, status, t0 = t, horizon = F)
+
+        # print(f"solucion = {solucion}")
+
         cr = calcular_largo_ruta(ruta_P, distancias)
         c_rutas.append(cr)
         costo_rutas += cr
