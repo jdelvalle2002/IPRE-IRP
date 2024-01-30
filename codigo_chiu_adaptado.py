@@ -378,22 +378,22 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
 #    for i in N:
 #        print(f"status[i] = {status[i]}")
 
-    r0  = m.addConstrs(I[i, t0] == status[i] for i in N)
-    r1  = m.addConstrs(I[i, t] == I[i, t - 1] + quicksum(q[i, k, t] for k in K) + u[i, t] - mu[i] for i in C for t in T)
-    r2  = m.addConstrs(I['N_0', t] == I['N_0', t - 1] + r - quicksum(q[i, k, t] for i in C for k in K) for t in T)
-    r3  = m.addConstrs(I[i, t - 1] + quicksum(q[i, k, t] for k in K) <= cap[i] for i in C for t in T)
-    r4  = m.addConstrs(q[i, k, t] <= min(Q, cap[i])*y[i, k, t] for i in C for k in K for t in T)
-    r5  = m.addConstrs(quicksum(q[i, k, t] for i in C) <= Q*y['N_0', k, t] for k in K for t in T)
-    r6  = m.addConstrs(quicksum(x[i, j, k, t] for j in N if i != j) == y[i, k, t] for i in N for k in K for t in T)
-    r7  = m.addConstrs(quicksum(x[j, i, k, t] for j in N if i != j) == y[i, k, t] for i in N for k in K for t in T)
-    r8  = m.addConstrs(quicksum(y[i, k, t] for k in K) <= 1 for i in C for t in T)
+    r0  = m.addConstrs(I[i, t0] == status[i] for i in N) # que sea compatible la variable de inventario con el estado inicial
+    r1  = m.addConstrs(I[i, t] == I[i, t - 1] + quicksum(q[i, k, t] for k in K) + u[i, t] - mu[i] for i in C for t in T) # que calce el inventario con la demanda ??
+    r2  = m.addConstrs(I['N_0', t] == I['N_0', t - 1] + r - quicksum(q[i, k, t] for i in C for k in K) for t in T) # que calce el inventario con la demanda para el depot
+    r3  = m.addConstrs(I[i, t - 1] + quicksum(q[i, k, t] for k in K) <= cap[i] for i in C for t in T) # que el inventario no supere la capacidad
+    r4  = m.addConstrs(q[i, k, t] <= min(Q, cap[i])*y[i, k, t] for i in C for k in K for t in T) # que la cantidad de producto no supere la capacidad del vehiculo
+    r5  = m.addConstrs(quicksum(q[i, k, t] for i in C) <= Q*y['N_0', k, t] for k in K for t in T) # que la cantidad de producto no supere la capacidad del vehiculo
+    r6  = m.addConstrs(quicksum(x[i, j, k, t] for j in N if i != j) == y[i, k, t] for i in N for k in K for t in T) # que la variable de decision x sea compatible con la variable de decision y
+    r7  = m.addConstrs(quicksum(x[j, i, k, t] for j in N if i != j) == y[i, k, t] for i in N for k in K for t in T) # que la variable de decision x sea compatible con la variable de decision y
+    r8  = m.addConstrs(quicksum(y[i, k, t] for k in K) <= 1 for i in C for t in T) # que cada cliente sea visitado a lo mas por un vehiculo
     #r9 = subtour
-    r10 = m.addConstrs(y['N_0', k, t] >= y[i, k, t] for i in C for k in K for t in T)
-    r11 = m.addConstrs(x[i, j, k, t] <= y[i, k, t] for i in N for j in N for k in K for t in T if i != j)
-    r12 = m.addConstrs(x[j, i, k, t] <= y[i, k, t] for i in N for j in N for k in K for t in T if i != j)
-    r13 = m.addConstrs(y['N_0', k, t] <= y['N_0', k - 1, t] for k in K for t in T if k != 1)
-    r14 = m.addConstrs(y[i, k, t] <= quicksum(y[j, k - 1, t] for j in C if j  < i) for i in C for k in K for t in T if k >= 2)
-    r15 = m.addConstrs(I[i, t] >= min(cap[i] - mu[i], safety_stock[i]) for i in C for t in T)
+    r10 = m.addConstrs(y['N_0', k, t] >= y[i, k, t] for i in C for k in K for t in T) # que el depot sea visitado si el cliente es visitado
+    r11 = m.addConstrs(x[i, j, k, t] <= y[i, k, t] for i in N for j in N for k in K for t in T if i != j) # que la variable de decision x sea compatible con la variable de decision y
+    r12 = m.addConstrs(x[j, i, k, t] <= y[i, k, t] for i in N for j in N for k in K for t in T if i != j) # que la variable de decision x sea compatible con la variable de decision y
+    r13 = m.addConstrs(y['N_0', k, t] <= y['N_0', k - 1, t] for k in K for t in T if k != 1) # que el depot sea visitado a lo mas una vez
+    r14 = m.addConstrs(y[i, k, t] <= quicksum(y[j, k - 1, t] for j in C if j  < i) for i in C for k in K for t in T if k >= 2) # no sé pero algo con los autos
+    r15 = m.addConstrs(I[i, t] >= min(cap[i] - mu[i], safety_stock[i]) for i in C for t in T) # que el inventario no sea menor al stock de seguridad
 
     m.params.OutputFlag = 0
     m.params.TimeLimit = 600
@@ -405,7 +405,7 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
     if m.SolCount > 0:
         print(f"Se ha encontrado una solución en el tiempo {m.Runtime} segundos")
 
-    x_ = {(i, j, k): round(x[i, j, k, t0 + 1].x) for (i, j) in A for k in K}
+    x_ = {(i, j, k): round(x[i, j, k, t0 + 1].x) for (i, j) in A for k in K} 
     q_ = {(i, k): q[(i, k, t0 + 1)].x for i in C for k in K}
     y_ = {(i, k): round(y[i, k, t0 + 1].x) for i in N for k in K}
 
