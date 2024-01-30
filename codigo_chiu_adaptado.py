@@ -61,10 +61,8 @@ import math
 
 from gurobipy import *
 from statistics import mean
-<<<<<<< HEAD
-=======
 from funciones import *
->>>>>>> 7958b871f0e863ac9f6a46fd3d57cc9f2c2e5468
+from demandas import *
 
 
 
@@ -330,7 +328,7 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
             return argmax
 
         def IRPsubtour(G):
-            tour = nx.node_connected_component(G, 0)
+            tour = nx.node_connected_component(G, 'N_0')
             all_nodes = set(G.nodes())
             diff = all_nodes - tour
             return list(diff)
@@ -343,9 +341,9 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
             for t in T:
                 for k in K:
                     route_graph = nx.Graph()
-                    route_graph.add_nodes_from([0] + [i for i in C if y_[i, k, t] >= 0.001])
+                    route_graph.add_nodes_from(['N_0'] + [i for i in C if y_[i, k, t] >= 0.001])
 
-                    if y_[0, k, t] >= 0.5:
+                    if y_['N_0', k, t] >= 0.5:
                         for (i, j) in A:
                             if x_[i, j, k, t] >= 0.001:
                                 route_graph.add_edge(i, j, capacity = x_[i, j, k, t])
@@ -373,7 +371,7 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
     y = m.addVars(N, K, T, vtype = GRB.BINARY, name = 'y')
     u = m.addVars(C, T, name = 'u')
 
-    obj = m.setObjective(quicksum(c[i, j]*x[i, j, k, t] for (i, j) in A for k in K for t in T) + quicksum(h[i]*I[i, t] for i in N for t in T) + quicksum(a[i]*u[i, t] for i in C for t in T))
+    obj = m.setObjective(quicksum(c[i][j]*x[i, j, k, t] for (i, j) in A for k in K for t in T) + quicksum(h[i]*I[i, t] for i in N for t in T) + quicksum(a[i]*u[i, t] for i in C for t in T))
 
 #    print("restricciones de status")
 #    print("r0  = m.addConstrs(I[i, t0] == status[i] for i in N)")
@@ -382,20 +380,20 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
 
     r0  = m.addConstrs(I[i, t0] == status[i] for i in N)
     r1  = m.addConstrs(I[i, t] == I[i, t - 1] + quicksum(q[i, k, t] for k in K) + u[i, t] - mu[i] for i in C for t in T)
-    r2  = m.addConstrs(I[0, t] == I[0, t - 1] + r - quicksum(q[i, k, t] for i in C for k in K) for t in T)
+    r2  = m.addConstrs(I['N_0', t] == I['N_0', t - 1] + r - quicksum(q[i, k, t] for i in C for k in K) for t in T)
     r3  = m.addConstrs(I[i, t - 1] + quicksum(q[i, k, t] for k in K) <= cap[i] for i in C for t in T)
     r4  = m.addConstrs(q[i, k, t] <= min(Q, cap[i])*y[i, k, t] for i in C for k in K for t in T)
-    r5  = m.addConstrs(quicksum(q[i, k, t] for i in C) <= Q*y[0, k, t] for k in K for t in T)
+    r5  = m.addConstrs(quicksum(q[i, k, t] for i in C) <= Q*y['N_0', k, t] for k in K for t in T)
     r6  = m.addConstrs(quicksum(x[i, j, k, t] for j in N if i != j) == y[i, k, t] for i in N for k in K for t in T)
     r7  = m.addConstrs(quicksum(x[j, i, k, t] for j in N if i != j) == y[i, k, t] for i in N for k in K for t in T)
     r8  = m.addConstrs(quicksum(y[i, k, t] for k in K) <= 1 for i in C for t in T)
     #r9 = subtour
-    r10 = m.addConstrs(y[0, k, t] >= y[i, k, t] for i in C for k in K for t in T)
+    r10 = m.addConstrs(y['N_0', k, t] >= y[i, k, t] for i in C for k in K for t in T)
     r11 = m.addConstrs(x[i, j, k, t] <= y[i, k, t] for i in N for j in N for k in K for t in T if i != j)
     r12 = m.addConstrs(x[j, i, k, t] <= y[i, k, t] for i in N for j in N for k in K for t in T if i != j)
-    r13 = m.addConstrs(y[0, k, t] <= y[0, k - 1, t] for k in K for t in T if k != 1)
+    r13 = m.addConstrs(y['N_0', k, t] <= y['N_0', k - 1, t] for k in K for t in T if k != 1)
     r14 = m.addConstrs(y[i, k, t] <= quicksum(y[j, k - 1, t] for j in C if j  < i) for i in C for k in K for t in T if k >= 2)
-    r15 = m.addConstrs(I[i, t] >= min(cap[i] - mu[i], safety_stock[i, t-t0]) for i in C for t in T)
+    r15 = m.addConstrs(I[i, t] >= min(cap[i] - mu[i], safety_stock[i]) for i in C for t in T)
 
     m.params.OutputFlag = 0
     m.params.TimeLimit = 600
@@ -821,7 +819,7 @@ results = {col: [] for col in cols}
 
 dis_cols = ['ID', 'CID', '|C|', '|K|', 'OPTION', 'INVENTORY', 'LOST SALES', 'ROUTING', 'TOTAL COST', 'QUANTITY', 'VISITS', 'PREDICTIONS','FULL DEMAND', 'LOST DEMAND', 'FILL RATE', 'MIP GAP','PERIOD']
 dis_results = {col: [] for col in dis_cols}
-def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, tipo_demanda = dem, T = 365, d=30, F=7)
+def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_demanda = 'n', T = 365, d=30, F=7, TEST = FALSE):
     
     G0 = grafo_inicial.copy()
     matriz_dst = calcular_matriz_dist(G0)
@@ -830,9 +828,6 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, 
     h = [G0.nodes(data=True)[i]['h'] for i in ubicaciones] # Lista de costos de inventario
     rutas = {t : [] for t in range(T)} # Lista de rutas
 
-<<<<<<< HEAD
-    
-=======
     inventario_total = []
     perdidas = []
     c_rutas =[]
@@ -855,6 +850,8 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, 
     #self.h = {i: h[i] for i in self.N for t in self.T} #costo de inventario
     #self.a = unpickled['Param']['a'] #costo de demanda insatisfecha
     #self.r = unpickled['Param']['r'] #cantidad de unidades que llegan al depot en cada periodo
+    if TEST == True:
+        T = 1
     for t in range(T):
         print('\n')
         mu_demanda = [np.mean(dem_historico[nodo]) for nodo in dem_historico.keys()]    
@@ -867,58 +864,66 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, 
 
         # ahora incluimos el modelo de optimización
         params = {}
-        params['Q'] = capacidad
-        params['cap'] = {i: G.nodes(data=True)[i]['Up'] for i in ubicaciones}
+        params['Q'] = cap
+        params['cap'] = {i: G0.nodes(data=True)[i]['Up'] for i in ubicaciones if i != 'N_0'}
         params['c'] = matriz_dst
-        params['h'] = h
-        params['a'] = 10 # REVISAR ESTE COSTO
-        params['r'] = 30 # revisar esto también, HAY QUE CAMBIARLO
-        params['pos'] = {i: G.nodes(data=True)[i]['pos'] for i in ubicaciones}
-
+        params['h'] = {i: G0.nodes(data=True)[i]['h'] for i in ubicaciones}
+        params['a'] = {i : 10 for i in ubicaciones if i != 'N_0'}
+        params['r'] = 30 # revisar esto también, HAY QUE CAMBIARLO, ajustar según caso? es una variable o un parámetro en función de la demanda?
+        params['pos'] = {i: G0.nodes(data=True)[i]['pos'] for i in ubicaciones}
+        
         sets = {}
         sets['T'] = [t + t_i for t_i in range(F)]
         sets['C'] = [i for i in ubicaciones if i != 'N_0']
         sets['N'] = ubicaciones
         sets['A'] = [e for e in G0.edges()]
-        sets['K'] = 1
+        sets['K'] = [1]
 
-        status = {i: G0.nodes(data=True)[i]['Inv'] for i in ubicaciones} # MODIFICAR!!!
-
-        PROBS = {}
+        status = {i: G0.nodes(data=True)[i]['Inv'] for i in ubicaciones}
+        mu = {nodo: np.mean(dem_historico[nodo]) for nodo in dem_historico.keys() if nodo != 'N_0'}
+        sd = {nodo: np.std(dem_historico[nodo]) for nodo in dem_historico.keys() if nodo != 'N_0'}
+        probs = {'mu': mu, 'sigma': sd}
+        
+        params['ss'] = {i: mu[i] + norm.ppf(0.95)*sd[i] 
+                        for i in dem_historico.keys()} # key es (customer, day), value es safety stock
 
         solucion = Solve_IRP_SS(sets, params, probs, status, t0 = t, horizon = F)
 
-        # print(f"solucion = {solucion}")
+        print(f"solucion = {solucion}")
 
-        cr = calcular_largo_ruta(ruta_P, distancias)
-        c_rutas.append(cr)
-        costo_rutas += cr
+        if TEST == False:
 
-        if ruta_P != [] and ruta_P != None and ruta_P != ['N_0']:
-             ruta_P += ['N_0']
-             G0, stock = ejecutar_ruta(G0, ruta_P, distancias)
-        
-        elif ruta_P == ['N_0'] or ruta_P == ['N_0','N_0']:
-            ruta_P = []
+            cr = calcular_largo_ruta(ruta_P, distancias)
+            c_rutas.append(cr)
+            costo_rutas += cr
 
-        rutas[t] = ruta_P
-        # print(f"Ruta {t}: ", ruta_P)
-        # visitas_proactiva = proactiva_inventario(G0, tolerancia = 0.2, dist = 'n', mu = 0, sigma = 0.1, M = 1000)
+            if ruta_P != [] and ruta_P != None and ruta_P != ['N_0']:
+                ruta_P += ['N_0']
+                G0, stock = ejecutar_ruta(G0, ruta_P, distancias)
+            
+            elif ruta_P == ['N_0'] or ruta_P == ['N_0','N_0']:
+                ruta_P = []
 
-        G0, demanda, insatisfecho = realizacion_demanda_modificada(G0, dist = tipo_demanda, T=T, demandas_in=dem_historico, d=d, t=t)
-        demandas_efectivas.append(demanda)
-        costo_SO += insatisfecho*1
-        d_total += sum(demanda.values())
-        inventarios = [G0.nodes(data=True)[i]['Inv'] for i in ubicaciones if i != 'N_0']
-        inventario_total.append(sum(inventarios))
-        perdidas.append(insatisfecho)
+            rutas[t] = ruta_P
+            # print(f"Ruta {t}: ", ruta_P)
+            # visitas_proactiva = proactiva_inventario(G0, tolerancia = 0.2, dist = 'n', mu = 0, sigma = 0.1, M = 1000)
 
-        print(f'Tiempo: {t} | Ruta: {ruta_P} | costo_SO: {insatisfecho*1} | costo_r: {cr}')
-        #Actualizo demandas
-        for nodo in ubicaciones:
-            if nodo != 'N_0':
-                dem_historico[nodo].append(demanda[nodo]) 
+            G0, demanda, insatisfecho = realizacion_demanda_modificada(G0, dist = tipo_demanda, T=T, demandas_in=dem_historico, d=d, t=t)
+            demandas_efectivas.append(demanda)
+            costo_SO += insatisfecho*1
+            d_total += sum(demanda.values())
+            inventarios = [G0.nodes(data=True)[i]['Inv'] for i in ubicaciones if i != 'N_0']
+            inventario_total.append(sum(inventarios))
+            perdidas.append(insatisfecho)
+
+            print(f'Tiempo: {t} | Ruta: {ruta_P} | costo_SO: {insatisfecho*1} | costo_r: {cr}')
+            #Actualizo demandas
+            for nodo in ubicaciones:
+                if nodo != 'N_0':
+                    dem_historico[nodo].append(demanda[nodo]) 
                 # HAY QUE VER CÓMO SE COMPORTA ESTO CON LA DEMANDA MODIFICADA
+        else:
+            return solucion
 
     # print('\n')
     # print("Inventario final: ")
@@ -929,7 +934,6 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, 
     # graficar_rutas(rutas, G0)
     costos = (perdidas, c_rutas)
     return rutas, perdidas, inventario_total, costos, demandas_efectivas
->>>>>>> 7958b871f0e863ac9f6a46fd3d57cc9f2c2e5468
     
     
 
@@ -938,11 +942,7 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, 
 
 
 
-<<<<<<< HEAD
-
-=======
 """
->>>>>>> 7958b871f0e863ac9f6a46fd3d57cc9f2c2e5468
 
     for n_clients in [10]:
         for n_vehicles in [2]:
@@ -982,9 +982,5 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, capacidad, 
 
                 df = pd.DataFrame(data=dis_results)
                 df.to_csv('Results/d_dis_reults_I{}.csv'.format(n_clients), decimal = ',', sep = '\t')
-<<<<<<< HEAD
-
-=======
 """
->>>>>>> 7958b871f0e863ac9f6a46fd3d57cc9f2c2e5468
 # %%
