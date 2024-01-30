@@ -256,6 +256,11 @@ def IC_nrm(mu, sd, M=1000, alfa=0.95):
 
     return limite_inferior, limite_superior
 
+def adaptar_pron(prono, F):
+    dict_pro = {}
+    for t in range(F):
+        dict_pro[t] = {nodo: prono[nodo]  for nodo in prono.keys()}
+    return dict_pro
 
 def ejecutar_ruta(G, ruta, matriz_dst):
     """
