@@ -11,7 +11,7 @@ from scipy.stats import norm
 from matplotlib.colors import ListedColormap
 import funciones
 
-def simular_demanda_previa(G, dist="n", T=100, ruido=0, d=1):
+def simular_demanda_previa(G, dist="n", T=100, ruido=0, d=1, plot = False):
     """
     Función que simula la demanda previa de los locales.
     """
@@ -26,6 +26,15 @@ def simular_demanda_previa(G, dist="n", T=100, ruido=0, d=1):
         demandas = demanda_diagonal(G, T=T, ruido=ruido)    
     elif dist == "pir":
         demandas = demanda_piramide(G, T=T, ruido=ruido)
+
+    if plot:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        for nodo in demandas.keys():
+            ax.plot(demandas[nodo], label=nodo)
+        ax.set_xlabel("Tiempo")
+        ax.set_ylabel("Demanda")
+        ax.legend()
+        plt.show()
     return demandas
 
 def demanda_estable(G, T=100, ruido=0):
@@ -114,11 +123,11 @@ def demanda_piramide(G, T=100, ruido = 0):
             for t in range(T):
                 if t < T/2:
                     dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.01) 
-                                       * (0.5 * nodo[1]["Prod"] + 1.5*nodo[1]["Prod"] * t/T) # REVISAR IMPLEMENTACIÓN	
+                                       * (0.5 * nodo[1]["Prod"] + 1*nodo[1]["Prod"] * 1*t/T) # REVISAR IMPLEMENTACIÓN	
                                        + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
                 else:
                     dem_pasadas.append(max(np.random.normal(loc=nodo[1]["Prod"], scale=nodo[1]["Prod"] * 0.01) 
-                                       * (-0.5 * nodo[1]["Prod"] + 1.5*nodo[1]["Prod"] * t/T) # REVISAR IMPLEMENTACIÓN	
+                                       * (1.5 * nodo[1]["Prod"] - 1*nodo[1]["Prod"] * (t/T)) # REVISAR IMPLEMENTACIÓN	
                                        + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
             demandas[nodo[0]] = dem_pasadas
     return demandas
