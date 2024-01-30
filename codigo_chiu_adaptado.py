@@ -863,6 +863,7 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
     costo_rutas = 0
     costo_SO = 0
 
+    params_pron = calibrar_pronostico(G0, dem_historico, range(len(dem_historico)), verbose = True)
     #self.T = unpickled['Sets']['T'] #periodos
     #self.C = unpickled['Sets']['C'] #clientes
     #self.N = unpickled['Sets']['N'] #nodos
