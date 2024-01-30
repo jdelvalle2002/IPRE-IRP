@@ -137,3 +137,4 @@ def demanda_piramide(G, T=100, ruido = 0):
                                        + np.random.normal(loc=0, scale=nodo[1]["Prod"] * ruido), 0))
             demandas[nodo[0]] = dem_pasadas
     return demandas
+
