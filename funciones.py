@@ -445,3 +445,28 @@ def calcular_costo_consolidado(costos, inventarios):
 
 def ss(mu, sd, alfa = 0.025):
     return mu + norm.ppf((1 - alfa)/2)* sd
+
+def calibrar_pronostico(G, historia, tiempo, verbose = False):
+    best = {}
+    for nodo in G.nodes():
+        if nodo != 'N_0':
+            best_nodo = [0,0,0,100]
+            for i in range(1,10):
+                for j in range(1,10):
+                    ap = i/10
+                    bt = j/10
+                    th = 0.5
+                    error = []
+                    for t in tiempo:
+                        d_real = historia[nodo][t]
+                        pron = pronostico_SEDA(historia[nodo], T = 3, pron = True, alpha = ap, beta= bt, theta=th)[0]
+                        error_t = 100*abs(d_real - pron)/d_real
+                        error.append(error_t)
+                    if np.mean(error) < best_nodo[3]:
+                        best_nodo = [ap,bt,th,np.mean(error)]
+                        if verbose == True:
+                            print(f'alpha = {ap}, beta = {bt}, theta = {th}, error = {np.mean(error)}%')
+            if verbose == True:
+                print(f'Nodo {nodo}: {best_nodo}')
+            best[nodo] = best_nodo
+    return best
