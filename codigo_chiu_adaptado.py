@@ -402,6 +402,9 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
 
     m.optimize(IRPcut)
 
+    if m.SolCount > 0:
+        print(f"Se ha encontrado una solución en el tiempo {m.Runtime} segundos")
+
     x_ = {(i, j, k): round(x[i, j, k, t0 + 1].x) for (i, j) in A for k in K}
     q_ = {(i, k): q[(i, k, t0 + 1)].x for i in C for k in K}
     y_ = {(i, k): round(y[i, k, t0 + 1].x) for i in N for k in K}
@@ -819,15 +822,38 @@ results = {col: [] for col in cols}
 
 dis_cols = ['ID', 'CID', '|C|', '|K|', 'OPTION', 'INVENTORY', 'LOST SALES', 'ROUTING', 'TOTAL COST', 'QUANTITY', 'VISITS', 'PREDICTIONS','FULL DEMAND', 'LOST DEMAND', 'FILL RATE', 'MIP GAP','PERIOD']
 dis_results = {col: [] for col in dis_cols}
-def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_demanda = 'n', T = 365, d=30, F=7, TEST = FALSE):
-    
+
+def procesamiento_x_sol(x_):
+    pares_nodos = [(x[0],x[1]) for x in x_.keys() if x_[x] == 1]
+
+    if len(pares_nodos) <= 1:
+        return ['N_0', 'N_0']
+    else:
+        nodo_1 = pares_nodos[0][1]
+        lista_ruta = ['N_0', nodo_1]
+        while True:
+            for par in pares_nodos:
+                if par[0] == nodo_1:
+                    nodo_1 = par[1]
+                    lista_ruta.append(nodo_1)
+                    break
+            if nodo_1 == 'N_0':
+                break
+
+        return lista_ruta
+            
+
+
+
+def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_demanda = 'n', T = 365, d=30, F=7, TEST = False):
+
     G0 = grafo_inicial.copy()
-    matriz_dst = calcular_matriz_dist(G0)
+    distancias = calcular_matriz_dist(G0)
     ubicaciones = list(G0.nodes()) # Lista de ubicaciones
     inventarios = [[G0.nodes(data=True)[i]['Inv'] for i in ubicaciones]] # Lista de inventarios
     h = [G0.nodes(data=True)[i]['h'] for i in ubicaciones] # Lista de costos de inventario
     rutas = {t : [] for t in range(T)} # Lista de rutas
-
+    d_total = 0
     inventario_total = []
     perdidas = []
     c_rutas =[]
@@ -850,11 +876,10 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
     #self.h = {i: h[i] for i in self.N for t in self.T} #costo de inventario
     #self.a = unpickled['Param']['a'] #costo de demanda insatisfecha
     #self.r = unpickled['Param']['r'] #cantidad de unidades que llegan al depot en cada periodo
-    if TEST == True:
-        T = 1
+    
     for t in range(T):
         print('\n')
-        mu_demanda = [np.mean(dem_historico[nodo]) for nodo in dem_historico.keys()]    
+        mu_demanda = [np.mean(dem_historico[nodo]) for nodo in dem_historico.keys()]
         sd_demanda = [np.std(dem_historico[nodo]) for nodo in dem_historico.keys()]
         pronostico = {int(nodo[2:]): pronostico_SEDA(
                                     dem_historico[nodo], T = F, pron = True, alpha=0.2, beta=0.1, theta=0.5)[0]
@@ -866,7 +891,7 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
         params = {}
         params['Q'] = cap
         params['cap'] = {i: G0.nodes(data=True)[i]['Up'] for i in ubicaciones if i != 'N_0'}
-        params['c'] = matriz_dst
+        params['c'] = distancias
         params['h'] = {i: G0.nodes(data=True)[i]['h'] for i in ubicaciones}
         params['a'] = {i : 10 for i in ubicaciones if i != 'N_0'}
         params['r'] = 30 # revisar esto también, HAY QUE CAMBIARLO, ajustar según caso? es una variable o un parámetro en función de la demanda?
@@ -887,43 +912,41 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
         params['ss'] = {i: mu[i] + norm.ppf(0.95)*sd[i] 
                         for i in dem_historico.keys()} # key es (customer, day), value es safety stock
 
-        solucion = Solve_IRP_SS(sets, params, probs, status, t0 = t, horizon = F)
+        x_sol, q_sol, y_sol, MIPGap_sol, y_pred = Solve_IRP_SS(sets, params, probs, status, t0 = t, horizon = F)
 
-        print(f"solucion = {solucion}")
+        # print(f"solucion = {x_, q_, y_, m.MIPGap, y_pred}")
 
-        if TEST == False:
-
-            cr = calcular_largo_ruta(ruta_P, distancias)
-            c_rutas.append(cr)
-            costo_rutas += cr
-
-            if ruta_P != [] and ruta_P != None and ruta_P != ['N_0']:
-                ruta_P += ['N_0']
-                G0, stock = ejecutar_ruta(G0, ruta_P, distancias)
             
-            elif ruta_P == ['N_0'] or ruta_P == ['N_0','N_0']:
-                ruta_P = []
+        ruta = procesamiento_x_sol(x_sol)
+        cr = calcular_largo_ruta(ruta, distancias)
+        c_rutas.append(cr)
+        costo_rutas += cr
 
-            rutas[t] = ruta_P
-            # print(f"Ruta {t}: ", ruta_P)
-            # visitas_proactiva = proactiva_inventario(G0, tolerancia = 0.2, dist = 'n', mu = 0, sigma = 0.1, M = 1000)
+        if ruta != [] and ruta != None and ruta != ['N_0']:
+            # ruta += ['N_0']
+            G0, stock = ejecutar_ruta(G0, ruta, distancias)
+        
+        elif ruta == ['N_0'] or ruta == ['N_0','N_0']:
+            ruta = []
 
-            G0, demanda, insatisfecho = realizacion_demanda_modificada(G0, dist = tipo_demanda, T=T, demandas_in=dem_historico, d=d, t=t)
-            demandas_efectivas.append(demanda)
-            costo_SO += insatisfecho*1
-            d_total += sum(demanda.values())
-            inventarios = [G0.nodes(data=True)[i]['Inv'] for i in ubicaciones if i != 'N_0']
-            inventario_total.append(sum(inventarios))
-            perdidas.append(insatisfecho)
+        rutas[t] = ruta
+        # print(f"Ruta {t}: ", ruta_P)
+        # visitas_proactiva = proactiva_inventario(G0, tolerancia = 0.2, dist = 'n', mu = 0, sigma = 0.1, M = 1000)
 
-            print(f'Tiempo: {t} | Ruta: {ruta_P} | costo_SO: {insatisfecho*1} | costo_r: {cr}')
-            #Actualizo demandas
-            for nodo in ubicaciones:
-                if nodo != 'N_0':
-                    dem_historico[nodo].append(demanda[nodo]) 
-                # HAY QUE VER CÓMO SE COMPORTA ESTO CON LA DEMANDA MODIFICADA
-        else:
-            return solucion
+        G0, demanda, insatisfecho = realizacion_demanda_modificada(G0, dist = tipo_demanda, T=T, demandas_in=dem_historico, d=d, t=t)
+        demandas_efectivas.append(demanda)
+        costo_SO += insatisfecho*1
+        d_total += sum(demanda.values())
+        inventarios = [G0.nodes(data=True)[i]['Inv'] for i in ubicaciones if i != 'N_0']
+        inventario_total.append(sum(inventarios))
+        perdidas.append(insatisfecho)
+
+        print(f'Tiempo: {t} | Ruta: {ruta} | costo_SO: {insatisfecho*1} | costo_r: {cr}')
+        #Actualizo demandas
+        for nodo in ubicaciones:
+            if nodo != 'N_0':
+                dem_historico[nodo].append(demanda[nodo]) 
+            # HAY QUE VER CÓMO SE COMPORTA ESTO CON LA DEMANDA MODIFICADA
 
     # print('\n')
     # print("Inventario final: ")
