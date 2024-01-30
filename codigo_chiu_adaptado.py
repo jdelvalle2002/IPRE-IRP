@@ -393,7 +393,7 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
     r12 = m.addConstrs(x[j, i, k, t] <= y[i, k, t] for i in N for j in N for k in K for t in T if i != j) # que la variable de decision x sea compatible con la variable de decision y
     r13 = m.addConstrs(y['N_0', k, t] <= y['N_0', k - 1, t] for k in K for t in T if k != 1) # que el depot sea visitado a lo mas una vez
     r14 = m.addConstrs(y[i, k, t] <= quicksum(y[j, k - 1, t] for j in C if j  < i) for i in C for k in K for t in T if k >= 2) # no sé pero algo con los autos
-    r15 = m.addConstrs(I[i, t] >= min(cap[i] - mu[i,t], safety_stock[i,t]) for i in C for t in T) # que el inventario no sea menor al stock de seguridad
+    r15 = m.addConstrs(I[i, t] >= min((cap[i] - mu[i,t])*0.5, safety_stock[i,t]*0.5) for i in C for t in T) # que el inventario no sea menor al stock de seguridad
 
     m.params.OutputFlag = 0
     m.params.TimeLimit = 600
@@ -863,6 +863,7 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
     demandas_efectivas = []
     costo_rutas = 0
     costo_SO = 0
+    params_pron = calibrar_pronostico(G0, dem_historico, range(len(dem_historico)), verbose = False)
     print("Status inicial grafo")
     print(G0.nodes(data=True))
     #self.T = unpickled['Sets']['T'] #periodos
@@ -886,7 +887,11 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
         mu_demanda = [np.mean(dem_historico[nodo]) for nodo in dem_historico.keys()]
         sd_demanda = [np.std(dem_historico[nodo]) for nodo in dem_historico.keys()]
         pronostico = {int(nodo[2:]): pronostico_SEDA(
-                                    dem_historico[nodo], T = F, pron = True, alpha=0.2, beta=0.1, theta=0.5)[0]
+                                    dem_historico[nodo], T = F, pron = True, 
+                                    alpha = params_pron[nodo][0],
+                                    beta  = params_pron[nodo][1],
+                                    theta = params_pron[nodo][2]
+                                    )[0]
                                     for nodo in dem_historico.keys()}
         # print(pronostico)
         pronostico = adaptar_pron(pronostico, F)
