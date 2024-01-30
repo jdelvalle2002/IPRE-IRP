@@ -380,13 +380,13 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
 
     r0  = m.addConstrs(I[i, t0] == status[i] for i in N) # que sea compatible la variable de inventario con el estado inicial
     r1  = m.addConstrs(I[i, t] == I[i, t - 1] + quicksum(q[i, k, t] for k in K) + u[i, t] - mu[i,t] for i in C for t in T) # que calce el inventario con la demanda ??
-    # r2  = m.addConstrs(I['N_0', t] == I['N_0', t - 1] + r - quicksum(q[i, k, t] for i in C for k in K) for t in T) # que calce el inventario con la demanda para el depot
+    r2  = m.addConstrs(I['N_0', t] == I['N_0', t - 1] + r - quicksum(q[i, k, t] for i in C for k in K) for t in T) # que calce el inventario con la demanda para el depot
     r3  = m.addConstrs(I[i, t - 1] + quicksum(q[i, k, t] for k in K) <= cap[i] for i in C for t in T) # que el inventario no supere la capacidad
     r4  = m.addConstrs(q[i, k, t] <= min(Q, cap[i])*y[i, k, t] for i in C for k in K for t in T) # que la cantidad de producto no supere la capacidad del vehiculo
     r5  = m.addConstrs(quicksum(q[i, k, t] for i in C) <= Q*y['N_0', k, t] for k in K for t in T) # que la cantidad de producto no supere la capacidad del vehiculo
     r6  = m.addConstrs(quicksum(x[i, j, k, t] for j in N if i != j) == y[i, k, t] for i in N for k in K for t in T) # que la variable de decision x sea compatible con la variable de decision y
     r7  = m.addConstrs(quicksum(x[j, i, k, t] for j in N if i != j) == y[i, k, t] for i in N for k in K for t in T) # que la variable de decision x sea compatible con la variable de decision y
-    r8  = m.addConstrs(quicksum(y[i, k, t] for k in K) <= 1 for i in C for t in T) # que cada cliente sea visitado a lo mas por un vehiculo
+    r8  = m.addConstrs(quicksum(y[i, k, t] for k in K) <= 1.01 for i in C for t in T) # que cada cliente sea visitado a lo mas por un vehiculo
     #r9 = subtour
     r10 = m.addConstrs(y['N_0', k, t] >= y[i, k, t] for i in C for k in K for t in T) # que el depot sea visitado si el cliente es visitado
     r11 = m.addConstrs(x[i, j, k, t] <= y[i, k, t] for i in N for j in N for k in K for t in T if i != j) # que la variable de decision x sea compatible con la variable de decision y
@@ -404,9 +404,10 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
 
     if m.SolCount > 0:
         print(f"Se ha encontrado una solución en el tiempo {m.Runtime} segundos")
+        
     else:
         print(f"No se ha encontrado solución en el tiempo {m.Runtime} segundos")
-
+        return 0, 0, 0, 0, 0, False
     x_ = {(i, j, k): round(x[i, j, k, t0 + 1].x) for (i, j) in A for k in K} 
     q_ = {(i, k): q[(i, k, t0 + 1)].x for i in C for k in K}
     y_ = {(i, k): round(y[i, k, t0 + 1].x) for i in N for k in K}
@@ -422,7 +423,7 @@ def Solve_IRP_SS(sets, params, probs, status, t0 = 0, horizon = 3):
 #    print(f"y_ : {y_}")
 #    print(f"y_pred : {y_pred}")
     
-    return x_, q_, y_, m.MIPGap, y_pred
+    return x_, q_, y_, m.MIPGap, y_pred, True
 
 ############################################################## INICIO HEUR ##############################################################
 
@@ -862,7 +863,8 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
     demandas_efectivas = []
     costo_rutas = 0
     costo_SO = 0
-
+    print("Status inicial grafo")
+    print(G0.nodes(data=True))
     #self.T = unpickled['Sets']['T'] #periodos
     #self.C = unpickled['Sets']['C'] #clientes
     #self.N = unpickled['Sets']['N'] #nodos
@@ -896,7 +898,7 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
         params['c'] = distancias
         params['h'] = {i: G0.nodes(data=True)[i]['h'] for i in ubicaciones}
         params['a'] = {i : 10 for i in ubicaciones if i != 'N_0'}
-        params['r'] = 30 # revisar esto también, HAY QUE CAMBIARLO, ajustar según caso? es una variable o un parámetro en función de la demanda?
+        params['r'] = 50000 # revisar esto también, HAY QUE CAMBIARLO, ajustar según caso? es una variable o un parámetro en función de la demanda?
         params['pos'] = {i: G0.nodes(data=True)[i]['pos'] for i in ubicaciones}
         
         sets = {}
@@ -907,6 +909,8 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
         sets['K'] = [1]
 
         status = {i: G0.nodes(data=True)[i]['Inv'] for i in ubicaciones}
+        # print("Status N_0")
+        # print(status['N_0'])
         # definimos mu en base al pronóstico
         mu = {(i, t_): pronostico[t_-t-1][int(i[2:])] for i in sets['C'] for t_ in sets['T']}
         sd = {nodo: np.std(dem_historico[nodo]) for nodo in sets['C']}
@@ -920,10 +924,25 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
         #print("Keys ss")
         #print(params['ss'].keys())
 
-        x_sol, q_sol, y_sol, MIPGap_sol, y_pred = Solve_IRP_SS(sets, params, probs, status, t0 = t, horizon = F)
+        x_sol, q_sol, y_sol, MIPGap_sol, y_pred, booleano = Solve_IRP_SS(sets, params, probs, status, t0 = t, horizon = F)
 
+        if booleano == False:
+            print("no se encontró solución")
+            print("pronostico")
+            print(pronostico)
+            print("mu")
+            print(mu)
+            print("params")
+            print(params)
+            print("status")
+            print(status)
+            print("grafo")
+            print(G0.nodes(data=True))
+
+            print("sets")
+            print(sets)
         
-        print(q_sol)
+        # print(q_sol)
 
             
         ruta = procesamiento_x_sol(x_sol)
@@ -943,7 +962,12 @@ def simular_ejecucion_P_deterministico(grafo_inicial, dem_historico, cap, tipo_d
         # visitas_proactiva = proactiva_inventario(G0, tolerancia = 0.2, dist = 'n', mu = 0, sigma = 0.1, M = 1000)
 
         G0, demanda, insatisfecho = realizacion_demanda_modificada(G0, dist = tipo_demanda, T=T, demandas_in=dem_historico, d=d, t=t)
+        G0.nodes['N_0']['Inv'] += 50000
         demandas_efectivas.append(demanda)
+        print('demandas efectivas')
+        print(demanda)
+        print("variable q")
+        print(q_sol)
         costo_SO += insatisfecho*1
         d_total += sum(demanda.values())
         inventarios = [G0.nodes(data=True)[i]['Inv'] for i in ubicaciones if i != 'N_0']
